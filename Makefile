@@ -1,4 +1,4 @@
-DIRS = lib main
+DIRS = mod src 
 
 .PHONY: all clean dep
 .SUFFIXES : .c .o

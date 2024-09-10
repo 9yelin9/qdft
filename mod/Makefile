@@ -1,12 +1,12 @@
 include ../Makefile.inc
 
-LDFLAGS += -Wl,-rpath,../lib
-
-OBJS = qdft.o
-TARGETS = ../qdft
+OBJS = areig.o laeig.o util.o
+TARGETS = ../lib/libqdft.a
 
 %.o : %.c
 	$(CC) $(CFLAGS) -c $<
+%.o : %.cpp
+	$(CXX) $(CFLAGS) -c $<
 
 all : $(TARGETS)
 clean :
@@ -16,4 +16,4 @@ dep :
 	$(CC) $(CFLAGS) -M $(OBJS:.o=.c) 
 
 $(TARGETS) : $(OBJS)
-	$(CC) $(LDLIBS) $(LDFLAGS) -o $@ $(OBJS) $(LINKS)
+	$(AR) $@ $^
