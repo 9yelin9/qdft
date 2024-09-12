@@ -12,9 +12,10 @@
 #define double_complex double _Complex
 
 typedef struct {
+	int Ni; // # of sites
 	int Ne; // # of electrons
-	int N; // # of spin-orbitals (2*Ne)
-	int M; // # of states (2^N)
+	int N; // # of spin-orbitals (2*Ni)
+	int M; // # of states
 	double U; // on-site Coulomb interaction
 } environment;
 

@@ -29,6 +29,9 @@ void print_H(environment *env, hamiltonian *H) {
 		else {
 			printf("\nBroken symmetry:\n");
 			printf("%8d%8d%8d%16s%16s%16f\n",   i, H->row[i], H->col[i], row_bin, col_bin, creal(H->val[i]));
+
+			dec2bin(env->N, H->row[j], row_bin);
+			dec2bin(env->N, H->col[j], col_bin);
 			printf("%8d%8d%8d%16s%16s%16f\n\n", j, H->row[j], H->col[j], row_bin, col_bin, creal(H->val[j]));
 			break;
 		}

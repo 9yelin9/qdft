@@ -7,6 +7,15 @@ typedef struct {
 	double_complex val;
 } hamiltonian_tmp;
 
+int cnt_one(int n) {
+	int cnt=0;
+	while(n) {
+		cnt += n & 1;
+		n >>= 1;
+	}
+	return cnt;
+}
+
 int compare(const void *a, const void *b) {
 	int a_row = ((hamiltonian_tmp*)a)->row;
 	int b_row = ((hamiltonian_tmp*)b)->row;
@@ -19,42 +28,44 @@ void gen_H(environment *env, hamiltonian *H) {
 
 	H->nnz = 0;
 	for(n=0; n<env->M; n++) {
-		H->col_csc[n] = H->nnz;
+		if(cnt_one(n) == env->Ne) {
+			H->col_csc[n] = H->nnz;
 
-		nnz_tmp = 0;
-		H_tmp[nnz_tmp].row = n;
-		H_tmp[nnz_tmp].val = 0;
-		for(i=0; i<env->Ne; i++) {
-			a = n >> i;
-			b = n >> (i + env->Ne);
+			nnz_tmp = 0;
+			H_tmp[nnz_tmp].row = n;
+			H_tmp[nnz_tmp].val = 0;
+			for(i=0; i<env->Ne; i++) {
+				a = n >> i;
+				b = n >> (i + env->Ne);
 
-			H_tmp[nnz_tmp].val += V(i) * ((a & 1) + (b & 1)) + env->U * ((a & 1) * (b & 1));
-		}
-		nnz_tmp++;
+				H_tmp[nnz_tmp].val += V(i) * ((a & 1) + (b & 1)) + env->U * ((a & 1) * (b & 1));
+			}
+			nnz_tmp++;
 
-		for(i=0; i<env->Ne; i++) {
-			j = (i + d_ij) % env->Ne;
-			for(sp=0; sp<2; sp++) {
-				ii = i + env->Ne * sp;
-				jj = j + env->Ne * sp;
+			for(i=0; i<env->Ne; i++) {
+				j = (i + d_ij) % env->Ne;
+				for(sp=0; sp<2; sp++) {
+					ii = i + env->Ne * sp;
+					jj = j + env->Ne * sp;
 
-				a = n >> ii;
-				b = n >> jj;
+					a = n >> ii;
+					b = n >> jj;
 
-				if((!(a & 1) && (b & 1)) || ((a & 1) && !(b & 1))) {
-					H_tmp[nnz_tmp].row = n ^ ((1 << ii) | (1 << jj));
-					H_tmp[nnz_tmp].val = ((i + d_ij) / env->Ne) & 1 ? 1 : -1;
-					nnz_tmp++;
+					if((!(a & 1) && (b & 1)) || ((a & 1) && !(b & 1))) {
+						H_tmp[nnz_tmp].row = n ^ ((1 << ii) | (1 << jj));
+						H_tmp[nnz_tmp].val = ((i + d_ij) / env->Ne) & 1 ? 1 : -1;
+						nnz_tmp++;
+					}
 				}
 			}
-		}
 
-		qsort(H_tmp, nnz_tmp, sizeof(hamiltonian_tmp), compare);
-		for(i=0; i<nnz_tmp; i++) {
-			H->col[H->nnz] = n;
-			H->row[H->nnz] = H_tmp[i].row;
-			H->val[H->nnz] = H_tmp[i].val;
-			H->nnz++;
+			qsort(H_tmp, nnz_tmp, sizeof(hamiltonian_tmp), compare);
+			for(i=0; i<nnz_tmp; i++) {
+				H->col[H->nnz] = n;
+				H->row[H->nnz] = H_tmp[i].row;
+				H->val[H->nnz] = H_tmp[i].val;
+				H->nnz++;
+			}
 		}
 	}
 	H->col_csc[n] = H->nnz;
@@ -62,17 +73,18 @@ void gen_H(environment *env, hamiltonian *H) {
 
 int main(int argc, char *argv[]) {
 	if(argc < 2) {
-		printf("Usage: %s <Ne> <U>\n", argv[0]);
+		printf("Usage: %s <Ni> <Ne> <U>\n", argv[0]);
 		exit(1);
 	}
 
 	environment env = {
-		.Ne = atoi(argv[1]),
-		.N = 2 * env.Ne,
+		.Ni = atoi(argv[1]),
+		.Ne = atoi(argv[2]),
+		.N = 2 * env.Ni,
 		.M = 1 << env.N,
-		.U = atof(argv[2]),
+		.U = atof(argv[3]),
 	};
-	printf("Ne=%d\tN=%d\tM=%d\tU=%.1f\n\n", env.Ne, env.N, env.M, env.U);
+	printf("Ni=%d\tNe=%d\tN=%d\tM=%d\tU=%f\n\n", env.Ni, env.Ne, env.N, env.M, env.U);
 
 	hamiltonian H = {
 		.nnz = env.N * env.M, // init nnz
@@ -81,9 +93,11 @@ int main(int argc, char *argv[]) {
 		.col_csc = (int*)malloc(sizeof(int) * (env.M + 1)),
 		.val = (double_complex*)malloc(sizeof(double_complex) * H.nnz),
 	};
-	gen_H(&env, &H); //print_H(&env, &H);
-	printf("laeig(SR): %f\n", laeig(&env, &H));
-	printf("areig(SR): %f\n\n", areig(&env, &H));
+
+	gen_H(&env, &H);
+	print_H(&env, &H);
+	printf("FCI(LAPACK): %f\n", laeig(&env, &H));
+	printf("FCI(ARPACK): %f\n", areig(&env, &H));
 
 	free(H.row);
 	free(H.col);

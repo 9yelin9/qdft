@@ -2,17 +2,17 @@
 
 int main(int argc, char *argv[]) {
 	if(argc < 2) {
-		printf("Usage: %s <Ne>\n", argv[0]);
+		printf("Usage: %s <Ni>\n", argv[0]);
 		exit(1);
 	}
 
 	environment env = {
-		.Ne = atoi(argv[1]),
-		.N = 2 * env.Ne,
+		.Ni = atoi(argv[1]),
+		.N = 2 * env.Ni,
 		.M = 1 << env.N,
 		.U = 0,
 	};
-	printf("Ne=%d\tN=%d\tM=%d\tU=%.1f\n\n", env.Ne, env.N, env.M, env.U);
+	printf("Ne=%d\tN=%d\tM=%d\n\n", env.Ne, env.N, env.M);
 
 	hamiltonian H = {
 		.nnz = env.M * env.M,
@@ -44,8 +44,13 @@ int main(int argc, char *argv[]) {
 	 * 0, 0, 4, 4
 	 */
 
-	printf("laeig: %f\n", laeig(&env, &H));
-	printf("areig: %f\n", areig(&env, &H));
+	printf("FCI(LAPACK): %f\n", laeig(&env, &H));
+	printf("FCI(ARPACK): %f\n", areig(&env, &H));
+
+	free(H.row);
+	free(H.col);
+	free(H.col_csc);
+	free(H.val);
 
 	return 0;
 }
