@@ -1,4 +1,4 @@
-#include "qdft.h"
+#include "hub1d.h"
 
 int main(int argc, char *argv[]) {
 	if(argc < 2) {
@@ -6,27 +6,29 @@ int main(int argc, char *argv[]) {
 		exit(1);
 	}
 
-	environment env = {
+	params pm = {
 		.Ni = atoi(argv[1]),
-		.N = 2 * env.Ni,
-		.M = 1 << env.N,
-		.U = 0,
+		.N = 2 * pm.Ni,
+		.Nb = 1 << pm.N,
+		.verbose = 1,
 	};
-	printf("Ne=%d\tN=%d\tM=%d\n\n", env.Ne, env.N, env.M);
+	printf("Ni=%d\nN=%d\nNb=%d\n\n", pm.Ni, pm.N, pm.Nb);
+	char dir_output[128]; sprintf(dir_output, "output/test_Ni%d", pm.Ni);
+	mkdir(dir_output, 0755);
 
 	hamiltonian H = {
-		.nnz = env.M * env.M,
+		.nnz = pm.Nb * pm.Nb,
 		.row = (int*)malloc(sizeof(int) * H.nnz),
 		.col = (int*)malloc(sizeof(int) * H.nnz),
-		.col_csc = (int*)malloc(sizeof(int) * (env.M + 1)),
+		.col_csc = (int*)malloc(sizeof(int) * (pm.Nb + 1)),
 		.val = (double_complex*)malloc(sizeof(double_complex) * H.nnz),
 	};
 
 	int i, j;
 	H.nnz = 0;
-	for(i=0; i<env.M; i++) {
+	for(i=0; i<pm.Nb; i++) {
 		H.col_csc[i] = H.nnz;
-		for(j=0; j<env.M; j++) {
+		for(j=0; j<pm.Nb; j++) {
 			if(abs(j-i) < 2) {
 				H.row[H.nnz] = j;
 				H.col[H.nnz] = i;
@@ -36,7 +38,7 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	H.col_csc[i] = H.nnz;
-	print_H(&env, &H);
+	print_H(&pm, &H, dir_output, "fci");
 	/* H = 
 	 * 1, 2, 0, 0,
 	 * 2, 2, 3, 0,
@@ -44,8 +46,9 @@ int main(int argc, char *argv[]) {
 	 * 0, 0, 4, 4
 	 */
 
-	printf("FCI(LAPACK): %f\n", laeig(&env, &H));
-	printf("FCI(ARPACK): %f\n", areig(&env, &H));
+	printf("\n");
+	printf("FCI(LAPACK): %f\n", laeig(&pm, &H));
+	printf("FCI(ARPACK): %f\n", areig(&pm, &H));
 
 	free(H.row);
 	free(H.col);

@@ -1,10 +1,10 @@
 #include <arcomp.h>
 #include <arlnsmat.h>
 #include <arlscomp.h>
-#include "qdft.h"
+#include "hub1d.h"
 
-extern "C" double areig(environment *env, hamiltonian *H) {
-	int i, n=env->M, nnz=H->nnz, nev=8;
+extern "C" double areig(params *pm, hamiltonian *H) {
+	int i, n=pm->Nb, nnz=H->nnz, nev=8;
 	arcomplex<double> A[nnz], EigVal[nev], *EigVal_p=EigVal;
 
 	for(i=0; i<nnz; i++) A[i] = arcomplex<double>(H->val[i]);
