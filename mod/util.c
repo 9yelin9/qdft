@@ -1,5 +1,11 @@
 #include "hub1d.h"
 
+int compare_basis(const void *key, const void *p) {
+	int key_val = *(int*)key;
+	int p_val = ((basis*)p)->val;
+	return (key_val > p_val) - (key_val < p_val);
+}
+
 void dec2bin(int len, int dec, char *bin) {
 	int i;
 	for(i=0; i<len; i++) {
@@ -14,15 +20,15 @@ void gen_dir_output(params *pm, char *dir_output) {
 	mkdir(dir_output, 0755);
 }
 
-void print_basis(params *pm, basis *b, char *dir_output, char *method) {
+void print_basis(params *pm, basis *b, char *dir_output, char *method, int verbose) {
 	char fn[1024];
-	sprintf(fn, "%s/%s_basis_U%.1f.txt", dir_output, method, pm->U);
+	sprintf(fn, "%s/%s_basis.txt", dir_output, method);
 	FILE *f = fopen(fn, "w");
 
 	int i;
 	char val_bin[pm->N+1];
 
-	if(!pm->verbose) freopen("/dev/null", "w", stdout);
+	if(!verbose) freopen("/dev/null", "w", stdout);
 
 	printf("---------------- basis ----------------\n");
 	printf("%8s%8s%20s\n", "idx", "val(10)", "val(2)");
@@ -34,51 +40,61 @@ void print_basis(params *pm, basis *b, char *dir_output, char *method) {
 	printf("---------------------------------------\n");
 	fclose(f);
 
-	if(!pm->verbose) freopen("/dev/tty", "w", stdout);
+	if(!verbose) freopen("/dev/tty", "w", stdout);
 
 	printf("%s: %s\n\n", __func__, fn);
 }
 
-void print_H(params *pm, hamiltonian *H, char *dir_output, char *method) {
-	char fn[1024];
-	sprintf(fn, "%s/%s_H_U%.1f.txt", dir_output, method, pm->U);
-	FILE *f = fopen(fn, "w");
+int check_hamiltonian_hermitian(params *pm, hamiltonian *h) {
+	int i, j;
 
-	int i, j, is_sym=1;
-
-	if(!pm->verbose) freopen("/dev/null", "w", stdout);
-
-	printf("----------------------- Hamiltonian -----------------------\n");
-	printf("%8s%8s%16s%16s\n", "row", "col", "val_real", "val_imag");
-	for(i=0; i<H->nnz; i++) {
-		for(j=0; j<H->nnz; j++) {
-			if(((H->row[i] == H->col[j]) && (H->row[j] == H->col[i])) && (fabs(H->val[i] - H->val[j]) > 1e-6)) {
-				is_sym = 0;
-				break;
+	for(i=0; i<h->nnz; i++) {
+		for(j=0; j<h->nnz; j++) {
+			if(((h->row[i] == h->col[j]) && (h->row[j] == h->col[i])) && (fabs(h->val[i] - h->val[j]) > 1e-6)) {
+				printf("\nERROR: hamiltonian is not hermitian (h[%d] != h[%d])\n", i, j);
+				return 1;
 			}
 		}
-		printf("%8d%8d%16f%16f\n", H->row[i], H->col[i], creal(H->val[i]), cimag(H->val[i]));
-		fprintf(f, "%8d%8d%16f%16f\n", H->row[i], H->col[i], creal(H->val[i]), cimag(H->val[i]));
-		if(!is_sym) {
-			printf("\nBroken symmetry:\n");
-			printf("%8d%8d%16f%16f\n\n", H->row[j], H->col[j], creal(H->val[i]), cimag(H->val[j]));
-			printf("-------------------------- ERROR --------------------------\n");
-			break;
+	}
+	return 0;
+}
+
+int check_coo2csc(params *pm, hamiltonian *h) {
+	int i, col_old=-1, cnt=0;
+
+	for(i=0; i<h->nnz; i++) {
+		if(h->col[i] != col_old) {
+			//printf("%d\t%d\t%d\n", h->col[i], i, h->col_csc[cnt]);
+			if(i != h->col_csc[cnt]) {
+				printf("\nERROR: coo2csc fail (%d != h_col_csc[%d])\n", i, cnt);
+				return 1;
+			}
+			else cnt++;
 		}
+		col_old = h->col[i];
+	}
+	return 0;
+}
+
+void print_hamiltonian(params *pm, hamiltonian *h, char *dir_output, char *method, int verbose) {
+	char fn[1024];
+	sprintf(fn, "%s/%s_hamiltonian_U%.1f_e%f.txt", dir_output, method, pm->U, h->e_grd);
+	FILE *f = fopen(fn, "w");
+
+	int i;
+
+	if(!verbose) freopen("/dev/null", "w", stdout);
+
+	printf("----------------------- hamiltonian -----------------------\n");
+	printf("%8s%8s%16s%16s\n", "row", "col", "val_real", "val_imag");
+	for(i=0; i<h->nnz; i++) {
+		printf("%8d%8d%16f%16f\n", h->row[i], h->col[i], creal(h->val[i]), cimag(h->val[i]));
+		fprintf(f, "%8d%8d%16f%16f\n", h->row[i], h->col[i], creal(h->val[i]), cimag(h->val[i]));
 	}
 	printf("-----------------------------------------------------------\n");
 	fclose(f);
 
-	/*
-	if(is_sym) {
-		printf("------- check coo2csc -------\n");
-		printf("%8s%8s%8s\n", "col_csc", "", "col_coo");
-		for(i=0; i<pm->Nb+1; i++) printf("%8d%8s%8d\n", H->col_csc[i], "", i);
-		printf("-----------------------------\n\n");
-	}
-	*/
-
-	if(!pm->verbose) freopen("/dev/tty", "w", stdout);
+	if(!verbose) freopen("/dev/tty", "w", stdout);
 
 	printf("%s: %s\n\n", __func__, fn);
 }

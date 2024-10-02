@@ -6,7 +6,7 @@
 typedef struct {
 	int row;
 	double_complex val;
-} hamiltonian_tmp;
+} hamiltonian_n;
 
 int combination(int n, int r) {
 	int i;
@@ -18,61 +18,46 @@ int combination(int n, int r) {
 	return num / den;
 }
 
-int cnt_ones(int n) {
-	int cnt=0;
-	while(n) {
-		cnt += n & 1;
-		n >>= 1;
-	}
-	return cnt;
-}
-
-int compare_hamiltonian_tmp(const void *p, const void *q) {
-	int p_row = ((hamiltonian_tmp*)p)->row;
-	int q_row = ((hamiltonian_tmp*)q)->row;
+int compare_hamiltonian_n(const void *p, const void *q) {
+	int p_row = ((hamiltonian_n*)p)->row;
+	int q_row = ((hamiltonian_n*)q)->row;
 	return (p_row > q_row) - (p_row < q_row);
-}
-
-int compare_basis(const void *key, const void *p) {
-	int key_val = *(int*)key;
-	int p_val = ((basis*)p)->val;
-	return (key_val > p_val) - (key_val < p_val);
 }
 
 void gen_basis_fci(params *pm, basis *b) {
 	int n, cnt=0;
 	for(n=0; n<(1 << pm->N); n++) {
-		if(cnt_ones(n) == pm->Ne) {
+		if(__builtin_popcount(n) == pm->Ne) {
 			b[cnt].idx = cnt;
 			b[cnt].val = n;
 			cnt++;
 		}
 	}
 	if(cnt != pm->Nb) {
-		printf("ERROR: Too many/few bases (%d != %d)\n", cnt, pm->Nb);
+		printf("\nERROR: Too many/few bases (%d != %d)\n", cnt, pm->Nb);
 		exit(1);
 	}
 }
 
-void gen_H_fci(params *pm, basis *b, hamiltonian *H) {
-	int n, p, q, i, j, ii, jj, d_ij=1, sp, key, nnz_tmp;
+void gen_hamiltonian_fci(params *pm, basis *b, hamiltonian *h) {
+	int n, p, q, i, j, ii, jj, sp, key, nnz_n, d_ij=1;
 	basis *find;
-	hamiltonian_tmp H_tmp[pm->N];
+	hamiltonian_n h_n[pm->N];
 
-	H->nnz = 0;
+	h->nnz = 0;
 	for(n=0; n<pm->Nb; n++) {
-		H->col_csc[n] = H->nnz;
+		h->col_csc[n] = h->nnz;
 
-		nnz_tmp = 0;
-		H_tmp[nnz_tmp].row = n;
-		H_tmp[nnz_tmp].val = 0;
+		nnz_n = 0;
+		h_n[nnz_n].row = n;
+		h_n[nnz_n].val = 0;
 		for(i=0; i<pm->Ni; i++) {
 			p = b[n].val >> i;
 			q = b[n].val >> (i + pm->Ni);
 
-			H_tmp[nnz_tmp].val += V(i) * ((p & 1) + (q & 1)) + pm->U * ((p & 1) * (q & 1));
+			h_n[nnz_n].val += V(i) * ((p & 1) + (q & 1)) + pm->U * ((p & 1) * (q & 1));
 		}
-		nnz_tmp++;
+		nnz_n++;
 
 		for(i=0; i<pm->Ni; i++) {
 			j = (i + d_ij) % pm->Ni;
@@ -88,27 +73,27 @@ void gen_H_fci(params *pm, basis *b, hamiltonian *H) {
 					find = bsearch(&key, b, pm->Nb, sizeof(basis), compare_basis);
 
 					if(find != NULL) {
-						H_tmp[nnz_tmp].row = find->idx;
-						H_tmp[nnz_tmp].val = ((i + d_ij) / pm->Ni) & 1 ? 1 : -1;
-						nnz_tmp++;
+						h_n[nnz_n].row = find->idx;
+						h_n[nnz_n].val = ((i + d_ij) / pm->Ni) & 1 ? 1 : -1;
+						nnz_n++;
 					}
 					else {
-						printf("ERROR: bsearch fail (n = %d)\n", n);
+						printf("\nERROR: bsearch fail (n = %d)\n", n);
 						exit(1);
 					}
 				}
 			}
 		}
 
-		qsort(H_tmp, nnz_tmp, sizeof(hamiltonian_tmp), compare_hamiltonian_tmp);
-		for(i=0; i<nnz_tmp; i++) {
-			H->col[H->nnz] = n;
-			H->row[H->nnz] = H_tmp[i].row;
-			H->val[H->nnz] = H_tmp[i].val;
-			H->nnz++;
+		qsort(h_n, nnz_n, sizeof(hamiltonian_n), compare_hamiltonian_n);
+		for(i=0; i<nnz_n; i++) {
+			h->col[h->nnz] = n;
+			h->row[h->nnz] = h_n[i].row;
+			h->val[h->nnz] = h_n[i].val;
+			h->nnz++;
 		}
 	}
-	H->col_csc[n] = H->nnz;
+	h->col_csc[n] = h->nnz;
 }
 
 int main(int argc, char *argv[]) {
@@ -123,8 +108,8 @@ int main(int argc, char *argv[]) {
 		.N = 2 * pm.Ni,
 		.Nb = combination(pm.N, pm.Ne),
 		.U = atof(argv[3]),
-		.verbose = argv[4] == NULL ? 0 : 1,
 	};
+	int verbose = argv[4] == NULL ? 0 : 1;
 	printf("Ni=%d\nNe=%d\nN=%d\nNb=%d\nU=%f\n\n", pm.Ni, pm.Ne, pm.N, pm.Nb, pm.U);
 
 	char dir_output[1024];
@@ -132,26 +117,24 @@ int main(int argc, char *argv[]) {
 
 	basis b[pm.Nb];
 	gen_basis_fci(&pm, b);
-	print_basis(&pm, b, dir_output, METHOD);
+	print_basis(&pm, b, dir_output, METHOD, verbose);
 
-	hamiltonian H = {
+	hamiltonian h = {
 		.nnz = pm.Nb * pm.Nb, // init nnz
-		.row = (int*)malloc(sizeof(int) * H.nnz),
-		.col = (int*)malloc(sizeof(int) * H.nnz),
+		.row = (int*)malloc(sizeof(int) * h.nnz),
+		.col = (int*)malloc(sizeof(int) * h.nnz),
 		.col_csc = (int*)malloc(sizeof(int) * (pm.Nb + 1)),
-		.val = (double_complex*)malloc(sizeof(double_complex) * H.nnz),
+		.val = (double_complex*)malloc(sizeof(double_complex) * h.nnz),
 	};
-	gen_H_fci(&pm, b, &H);
-	print_H(&pm, &H, dir_output, METHOD);
+	gen_hamiltonian_fci(&pm, b, &h);
+	//h.e_grd = lapack_eigval(&pm, &h);
+	h.e_grd = arpack_eigval(&pm, &h);
+	print_hamiltonian(&pm, &h, dir_output, METHOD, verbose);
 
-	printf("\n");
-	printf("FCI(LAPACK): %f\n", laeig(&pm, &H));
-	printf("FCI(ARPACK): %f\n", areig(&pm, &H));
-
-	free(H.row);
-	free(H.col);
-	free(H.col_csc);
-	free(H.val);
+	free(h.row);
+	free(h.col);
+	free(h.col_csc);
+	free(h.val);
 
 	return 0;
 }

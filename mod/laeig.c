@@ -1,20 +1,36 @@
 #include <lapack.h>
 #include "hub1d.h"
 
-double laeig(params *pm, hamiltonian *H) {
+double lapack_eigval(params *pm, hamiltonian *h) {
 	int i, ln=pm->Nb, lda=ln, lwork=2*ln-1, info;
 	char jobz='N', uplo='U';
 	double w[ln], rwork[3*ln-2];
 	double_complex a[ln*ln], work[lwork];
 
 	memset(a, 0, sizeof(double_complex) * ln*ln);
-	for(i=0; i<H->nnz; i++) a[pm->Nb*H->row[i] + H->col[i]] = H->val[i];
+	for(i=0; i<h->nnz; i++) a[pm->Nb*h->row[i] + h->col[i]] = h->val[i];
 
 	LAPACK_zheev(&jobz, &uplo, &ln, a, &lda, w, work, &lwork, rwork, &info);
 	if(info) {
-		printf("ERROR: LAPACK_zheev fail (info = %d)\n", info);
+		printf("\nERROR: LAPACK_zheev fail (info = %d)\n", info);
 		exit(1);
 	}
 
 	return w[0];
+}
+
+void lapack_eig(params *pm, hamiltonian *h, double *eigval, double_complex *eigvec) {
+	int i, ln=pm->Nb, lda=ln, lwork=2*ln-1, info;
+	char jobz='V', uplo='U';
+	double rwork[3*ln-2];
+	double_complex work[lwork];
+
+	memset(eigvec, 0, sizeof(double_complex) * ln*ln);
+	for(i=0; i<h->nnz; i++) eigvec[pm->Nb*h->row[i] + h->col[i]] = h->val[i];
+
+	LAPACK_zheev(&jobz, &uplo, &ln, eigvec, &lda, eigval, work, &lwork, rwork, &info);
+	if(info) {
+		printf("\nERROR: LAPACK_zheev fail (info = %d)\n", info);
+		exit(1);
+	}
 }

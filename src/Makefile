@@ -1,7 +1,7 @@
 include ../Makefile.inc
 
-OBJS = soft.o fci.o test.o
-TARGETS = ../soft ../fci ../test
+OBJS = soft.o fci.o
+TARGETS = ../soft ../fci
 
 %.o : %.c
 	$(CC) $(CFLAGS) -c $<
