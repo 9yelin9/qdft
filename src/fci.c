@@ -8,11 +8,6 @@ typedef struct {
 	double_complex val;
 } hamiltonian_n;
 
-typedef struct {
-	int idx;
-	double val;
-} probability;
-
 int combination(int n, int r) {
 	int i;
 	long num=1, den=1;
@@ -27,12 +22,6 @@ int compare_hamiltonian_n(const void *p, const void *q) {
 	int p_row = ((hamiltonian_n*)p)->row;
 	int q_row = ((hamiltonian_n*)q)->row;
 	return (p_row > q_row) - (p_row < q_row);
-}
-
-int compare_probability(const void *p, const void *q) {
-	double p_val = ((probability*)p)->val;
-	double q_val = ((probability*)q)->val;
-	return (q_val > p_val) - (q_val < p_val);
 }
 
 void gen_basis_fci(params *pm, basis *b) {
@@ -84,8 +73,8 @@ void gen_hamiltonian_fci(params *pm, basis *b, hamiltonian *h) {
 
 					if(find != NULL) {
 						h_n[nnz_n].row = find->idx;
-						//h_n[nnz_n].val = ((i + d_ij) / pm->Ni) & 1 ? 1 : -1;
-						h_n[nnz_n].val = -1;
+						h_n[nnz_n].val = ((i + d_ij) / pm->Ni) & 1 ? 1 : -1;
+						//h_n[nnz_n].val = -1;
 						nnz_n++;
 					}
 					else {
@@ -108,32 +97,30 @@ void gen_hamiltonian_fci(params *pm, basis *b, hamiltonian *h) {
 }
 
 void run_fci(params *pm, basis *b, hamiltonian *h, int verbose) {
-	int i, idx_max=10;
-	char buf[pm->N+2];
+	int n, i;
+	double occ_tot, occ[pm->Ni];
 	double_complex eigvec[pm->Nb];
-	probability prob[pm->Nb];
 
 	if(!verbose) freopen("/dev/null", "w", stdout);
 
-	printf("--------- full configuration interaction ---------\n");
+	printf("------------------------------------------------ full configuration interaction ------------------------------------------------\n");
+	printf("%8s%12s", " ", "e_grd"); for(i=0; i<pm->Ni; i++) printf("%10s%02d", "occ", i); printf("\n");
 
 	gen_hamiltonian_fci(pm, b, h);
 	arpack_eig(pm, h, &(h->e_grd), eigvec);
 
-	printf("e_grd = %f\n", h->e_grd);
-	printf("%8s%12s%22s\n", "order", "prob", "basis(2)");
+	memset(occ, 0, sizeof(occ));
+	for(n=0; n<pm->Nb; n++) for(i=0; i<pm->N; i++) occ[i % pm->Ni] += square_complex(eigvec[n]) * ((b[n].val >> i) & 1);
 
-	for(i=0; i<pm->Nb; i++) {
-		prob[i].idx = i;
-		prob[i].val = square_complex(eigvec[i]);
+	occ_tot = 0;
+	for(i=0; i<pm->Ni; i++) occ_tot += occ[i];
+	if(fabs(occ_tot - pm->Ne) > 1e-6) {
+		printf("\nERROR: occ_tot(%f) != Ne(%d)\n", occ_tot, pm->Ne);
+		exit(1);
 	}
-	qsort(prob, pm->Nb, sizeof(probability), compare_probability);
 
-	for(i=0; i<idx_max; i++) {
-		dec2bin(pm->N, b[prob[i].idx].val, buf);
-		printf("%8d%12f%22s\n", i, prob[i].val, buf);
-	}
-	printf("--------------------------------------------------\n");
+	printf("%8s%12f", " ", h->e_grd); for(i=0; i<pm->Ni; i++) printf("%12f", occ[i]); printf("\n");
+	printf("--------------------------------------------------------------------------------------------------------------------------------\n\n");
 
 	if(!verbose) freopen("/dev/tty", "w", stdout);
 }
