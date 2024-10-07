@@ -26,7 +26,7 @@ typedef struct {
 
 typedef struct {
 	int idx; // index in bases
-	int val; // | state (10) > = | 1up 2up ... Niup 1dn 2dn ... Nidn (2) >
+	int val; // | 1up 2up ... Niup 1dn 2dn ... Nidn >
 } basis;
 
 typedef struct {
@@ -46,13 +46,12 @@ void gen_dir_output(params *pm, char *dir_output);
 void print_basis(params *pm, basis *b, char *dir_output, char *method, int verbose);
 void print_hamiltonian(params *pm, hamiltonian *H, char *dir_output, char *method, int verbose);
 
-double lapack_eigval(params *pm, hamiltonian *H); // LAPACK_zheev eigensolver (full matrix)
 void lapack_eig(params *pm, hamiltonian *H, double *eigval, double_complex *eigvec); // LAPACK_zheev eigensolver (full matrix)
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-	double arpack_eigval(params *pm, hamiltonian *H); // ARPACK AREig eigensolver (csc matrix)
+	void arpack_eig(params *pm, hamiltonian *H, double *eigval, double_complex *eigvec); // ARPACK AREig eigensolver (csc matrix)
 #ifdef __cplusplus
 }
 #endif

@@ -138,7 +138,7 @@ void gen_hamiltonian_soft(params *pm, basis *b, hamiltonian *h, double *occ) {
 	}
 }
 
-void run_ks(params *pm, basis *b, hamiltonian *h, int verbose) {
+void run_soft(params *pm, basis *b, hamiltonian *h, int verbose) {
 	int i, k, itr, itr_max=100;
 	double e_grd_old=100, occ_tot, occ[pm->Ni], eigval[pm->Nb];
 	double_complex eigvec[pm->Nb*pm->Nb];
@@ -156,12 +156,12 @@ void run_ks(params *pm, basis *b, hamiltonian *h, int verbose) {
 		lapack_eig(pm, h, eigval, eigvec);
 
 		memset(occ, 0, sizeof(occ));
-		for(k=0; k<pm->Ne/2; k++) for(i=0; i<pm->Ni; i++) occ[i] += 2 * square_complex(eigvec[pm->Nb*k + i]);
+		for(k=0; k<pm->Ne; k++) for(i=0; i<pm->Ni; i++) occ[i] += square_complex(eigvec[pm->Nb*(k/2) + i]);
 
 		h->e_grd = 0;
-		for(k=0; k<pm->Ne/2; k++) h->e_grd += 2 * eigval[k];
-		for(i=0; i<pm->Ni;   i++) h->e_grd += E_XC(occ[i], pm->U, pm->beta);
-		for(i=0; i<pm->Ni;   i++) h->e_grd -= E_XC_DERIV(occ[i], pm->U, pm->beta) * occ[i];
+		for(k=0; k<pm->Ne; k++) h->e_grd += eigval[k/2];
+		for(i=0; i<pm->Ni; i++) h->e_grd += E_XC(occ[i], pm->U, pm->beta);
+		for(i=0; i<pm->Ni; i++) h->e_grd -= E_XC_DERIV(occ[i], pm->U, pm->beta) * occ[i];
 
 		printf("%8d%12f", itr, h->e_grd); for(i=0; i<pm->Ni; i++) printf("%12f", occ[i]); printf("\n");
 
@@ -195,7 +195,7 @@ int main(int argc, char *argv[]) {
 	};
 	int verbose = argv[4] == NULL ? 0 : 1;
 	pm.beta = gen_beta(pm.U, verbose);
-	printf("Ni=%d\nNe=%d\nU=%f\nbeta=%f\n\n", pm.Ni, pm.Ne, pm.U, pm.beta);
+	printf("Ni = %d\nNe = %d\nU = %f\nbeta = %f\n\n", pm.Ni, pm.Ne, pm.U, pm.beta);
 
 	char dir_output[1024];
 	gen_dir_output(&pm, dir_output);
@@ -210,7 +210,7 @@ int main(int argc, char *argv[]) {
 		.col = (int*)malloc(sizeof(int) * h.nnz),
 		.val = (double_complex*)malloc(sizeof(double_complex) * h.nnz),
 	};
-	run_ks(&pm, b, &h, 1);
+	run_soft(&pm, b, &h, 1);
 	print_hamiltonian(&pm, &h, dir_output, METHOD, verbose);
 
 	free(h.row);

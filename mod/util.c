@@ -7,10 +7,13 @@ int compare_basis(const void *key, const void *p) {
 }
 
 void dec2bin(int len, int dec, char *bin) {
-	int i;
-	for(i=0; i<len; i++) {
-		if((dec >> i) & 1) bin[i] = '1';
-		else               bin[i] = '0';
+	int i, len_half=len/2;
+	for(i=0; i<len+1; i++) {
+		if(i == len_half) bin[i] = ' ';
+		else {
+			if((dec >> (-1*(i < len_half ? 0 : 1) + i)) & 1) bin[i] = '1';
+			else                                             bin[i] = '0';
+		}
 	}
 	bin[i] = '\0';
 }
@@ -26,16 +29,16 @@ void print_basis(params *pm, basis *b, char *dir_output, char *method, int verbo
 	FILE *f = fopen(fn, "w");
 
 	int i;
-	char val_bin[pm->N+1];
+	char buf[pm->N+2];
 
 	if(!verbose) freopen("/dev/null", "w", stdout);
 
 	printf("---------------- basis ----------------\n");
-	printf("%8s%8s%20s\n", "idx", "val(10)", "val(2)");
+	printf("%8s%8s%22s\n", "idx", "basis(10)", "basis(2)");
 	for(i=0; i<pm->Nb; i++) {
-		dec2bin(pm->N, b[i].val, val_bin);
-		printf("%8d%8d%20s\n", b[i].idx, b[i].val, val_bin);
-		fprintf(f, "%8d%8d%20s\n", b[i].idx, b[i].val, val_bin);
+		dec2bin(pm->N, b[i].val, buf);
+		printf("%8d%8d%22s\n", b[i].idx, b[i].val, buf);
+		fprintf(f, "%8d%8d%22s\n", b[i].idx, b[i].val, buf);
 	}
 	printf("---------------------------------------\n");
 	fclose(f);
