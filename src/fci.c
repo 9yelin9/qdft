@@ -26,7 +26,7 @@ int compare_hamiltonian_n(const void *p, const void *q) {
 
 void gen_basis_fci(params *pm, basis *b) {
 	int n, cnt=0;
-	for(n=0; n<(1 << pm->N); n++) {
+	for(n=0; n<(1 << pm->Nx); n++) {
 		if(__builtin_popcount(n) == pm->Ne) {
 			b[cnt].idx = cnt;
 			b[cnt].val = n;
@@ -42,7 +42,7 @@ void gen_basis_fci(params *pm, basis *b) {
 void gen_hamiltonian_fci(params *pm, basis *b, hamiltonian *h) {
 	int n, p, q, i, j, ii, jj, sp, key, nnz_n, d_ij=1;
 	basis *find;
-	hamiltonian_n h_n[pm->N];
+	hamiltonian_n h_n[pm->Nx];
 
 	h->nnz = 0;
 	for(n=0; n<pm->Nb; n++) {
@@ -51,30 +51,31 @@ void gen_hamiltonian_fci(params *pm, basis *b, hamiltonian *h) {
 
 		h_n[nnz_n].row = n;
 		h_n[nnz_n].val = 0;
-		for(i=0; i<pm->Ni; i++) {
-			p = b[n].val >> i;
-			q = b[n].val >> (i + pm->Ni);
-			h_n[nnz_n].val += V(i) * ((p & 1) + (q & 1)) + pm->U * ((p & 1) * (q & 1));
+		for(i=0; i<pm->N; i++) {
+			p = (b[n].val >> i) & 1;
+			q = (b[n].val >> (i + pm->N)) & 1;
+
+			//h_n[nnz_n].val += V(i) * (p + q) + pm->U * (p * q);
+			h_n[nnz_n].val += 0;
 		}
 		nnz_n++;
 
-		for(i=0; i<pm->Ni; i++) {
-			j = (i + d_ij) % pm->Ni;
+		for(i=0; i<pm->N; i++) {
+			j = (i + d_ij) % pm->N;
 			for(sp=0; sp<2; sp++) {
-				ii = i + pm->Ni * sp;
-				jj = j + pm->Ni * sp;
+				ii = i + pm->N * sp;
+				jj = j + pm->N * sp;
 
-				p = b[n].val >> ii;
-				q = b[n].val >> jj;
+				p = (b[n].val >> ii) & 1;
+				q = (b[n].val >> jj) & 1;
 
-				if((!(p & 1) && (q & 1)) || ((p & 1) && !(q & 1))) {
+				if((!p && q) || (p && !q)) {
 					key = b[n].val ^ ((1 << ii) | (1 << jj));
 					find = bsearch(&key, b, pm->Nb, sizeof(basis), compare_basis);
 
 					if(find != NULL) {
 						h_n[nnz_n].row = find->idx;
-						h_n[nnz_n].val = ((i + d_ij) / pm->Ni) & 1 ? 1 : -1;
-						//h_n[nnz_n].val = -1;
+						h_n[nnz_n].val = ((i + d_ij) / pm->N) & 1 ? 1 : -1;
 						nnz_n++;
 					}
 					else {
@@ -98,28 +99,28 @@ void gen_hamiltonian_fci(params *pm, basis *b, hamiltonian *h) {
 
 void run_fci(params *pm, basis *b, hamiltonian *h, int verbose) {
 	int n, i;
-	double occ_tot, occ[pm->Ni];
+	double occ_tot, occ[pm->N];
 	double_complex eigvec[pm->Nb];
 
 	if(!verbose) freopen("/dev/null", "w", stdout);
 
 	printf("------------------------------------------------ full configuration interaction ------------------------------------------------\n");
-	printf("%8s%12s", " ", "e_grd"); for(i=0; i<pm->Ni; i++) printf("%10s%02d", "occ", i); printf("\n");
+	printf("%8s%12s", " ", "e_grd"); for(i=0; i<pm->N; i++) printf("%10s%02d", "occ", i); printf("\n");
 
 	gen_hamiltonian_fci(pm, b, h);
 	arpack_eig(pm, h, &(h->e_grd), eigvec);
 
 	memset(occ, 0, sizeof(occ));
-	for(n=0; n<pm->Nb; n++) for(i=0; i<pm->N; i++) occ[i % pm->Ni] += square_complex(eigvec[n]) * ((b[n].val >> i) & 1);
+	for(n=0; n<pm->Nb; n++) for(i=0; i<pm->Nx; i++) occ[i % pm->N] += square_complex(eigvec[n]) * ((b[n].val >> i) & 1);
 
 	occ_tot = 0;
-	for(i=0; i<pm->Ni; i++) occ_tot += occ[i];
+	for(i=0; i<pm->N; i++) occ_tot += occ[i];
 	if(fabs(occ_tot - pm->Ne) > 1e-6) {
 		printf("\nERROR: occ_tot(%f) != Ne(%d)\n", occ_tot, pm->Ne);
 		exit(1);
 	}
 
-	printf("%8s%12f", " ", h->e_grd); for(i=0; i<pm->Ni; i++) printf("%12f", occ[i]); printf("\n");
+	printf("%8s%12f", " ", h->e_grd); for(i=0; i<pm->N; i++) printf("%12f", occ[i]); printf("\n");
 	printf("--------------------------------------------------------------------------------------------------------------------------------\n\n");
 
 	if(!verbose) freopen("/dev/tty", "w", stdout);
@@ -127,19 +128,19 @@ void run_fci(params *pm, basis *b, hamiltonian *h, int verbose) {
 
 int main(int argc, char *argv[]) {
 	if(argc < 2) {
-		printf("Usage: %s <Ni> <Ne> <U> [verbose=0/1]\n\n", argv[0]);
+		printf("Usage: %s <N> <Ne> <U> [verbose=0/1]\n\n", argv[0]);
 		exit(1);
 	}
 
 	params pm = {
-		.Ni = atoi(argv[1]),
+		.N = atoi(argv[1]),
+		.Nx = 2 * pm.N,
 		.Ne = atoi(argv[2]),
-		.N = 2 * pm.Ni,
-		.Nb = combination(pm.N, pm.Ne),
+		.Nb = combination(pm.Nx, pm.Ne),
 		.U = atof(argv[3]),
 	};
 	int verbose = argv[4] == NULL ? 0 : 1;
-	printf("Ni = %d\nNe = %d\nN = %d\nNb = %d\nU = %f\n\n", pm.Ni, pm.Ne, pm.N, pm.Nb, pm.U);
+	printf("N = %d\nNe = %d\nNx = %d\nNb = %d\nU = %f\n\n", pm.N, pm.Ne, pm.Nx, pm.Nb, pm.U);
 
 	char dir_output[1024];
 	gen_dir_output(&pm, dir_output);

@@ -16,9 +16,9 @@
 #define SYSTEM "hub1d"
 
 typedef struct {
-	int Ni; // # of sites
+	int N; // # of sites
+	int Nx; // # of spin-orbitals (2 * N)
 	int Ne; // # of electrons
-	int N; // # of spin-orbitals (2 * Ni)
 	int Nb; // # of bases
 	double U; // on-site Coulomb interaction
 	double beta; // bethe ansatz parameter
@@ -26,7 +26,7 @@ typedef struct {
 
 typedef struct {
 	int idx; // index in bases
-	int val; // | 1up 2up ... Niup 1dn 2dn ... Nidn >
+	int val; // | 1up 2up ... Nup 1dn 2dn ... Ndn >
 } basis;
 
 typedef struct {

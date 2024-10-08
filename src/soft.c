@@ -110,23 +110,24 @@ void gen_hamiltonian_soft(params *pm, basis *b, hamiltonian *h, double *occ) {
 
 		h->row[h->nnz] = n;
 		h->col[h->nnz] = n;
-		h->val[h->nnz] = V(i) + E_H(occ[i], pm->U) + E_XC(occ[i], pm->U, pm->beta);
+		//h->val[h->nnz] = V(i) + E_H(occ[i], pm->U) + E_XC(occ[i], pm->U, pm->beta);
+		h->val[h->nnz] = 0;
 		h->nnz++;
 
-		for(i=0; i<pm->Ni; i++) {
-			j = (i + d_ij) % pm->Ni;
+		for(i=0; i<pm->N; i++) {
+			j = (i + d_ij) % pm->N;
 
-			p = b[n].val >> i;
-			q = b[n].val >> j;
+			p = (b[n].val >> i) & 1;
+			q = (b[n].val >> j) & 1;
 
-			if((!(p & 1) && (q & 1)) || ((p & 1) && !(q & 1))) {
+			if((!p && q) || (p && !q)) {
 				key = b[n].val ^ ((1 << i) | (1 << j));
 				find = bsearch(&key, b, pm->Nb, sizeof(basis), compare_basis);
 
 				if(find != NULL) {
 					h->row[h->nnz] = n;
 					h->col[h->nnz] = find->idx;
-					h->val[h->nnz] = ((i + d_ij) / pm->Ni) & 1 ? 1 : -1;
+					h->val[h->nnz] = ((i + d_ij) / pm->N) & 1 ? 1 : -1;
 					h->nnz++;
 				}
 				else {
@@ -140,33 +141,35 @@ void gen_hamiltonian_soft(params *pm, basis *b, hamiltonian *h, double *occ) {
 
 void run_soft(params *pm, basis *b, hamiltonian *h, int verbose) {
 	int i, k, itr, itr_max=100;
-	double e_grd_old=100, occ_tot, occ[pm->Ni], eigval[pm->Nb];
+	double e_grd_old=100, occ_tot, occ[pm->N], eigval[pm->Nb];
 	double_complex eigvec[pm->Nb*pm->Nb];
 
 	if(!verbose) freopen("/dev/null", "w", stdout);
 
 	printf("------------------------------------------------ kohn-sham self-consistent field ------------------------------------------------\n");
-	printf("%8s%12s", "itr", "e_grd"); for(i=0; i<pm->Ni; i++) printf("%10s%02d", "occ", i); printf("\n");
+	printf("%8s%12s", "itr", "e_grd"); for(i=0; i<pm->N; i++) printf("%10s%02d", "occ", i); printf("\n");
 
-	for(i=0; i<pm->Ni; i++) occ[i] = (double)pm->Ne / pm->Ni; // init occ
-	printf("%8d%12s", 0, "-"); for(i=0; i<pm->Ni; i++) printf("%12f", occ[i]); printf("\n");
+	for(i=0; i<pm->N; i++) occ[i] = (double)pm->Ne / pm->N; // init occ
+	printf("%8d%12s", 0, "-"); for(i=0; i<pm->N; i++) printf("%12f", occ[i]); printf("\n");
 
 	for(itr=1; itr<=itr_max; itr++) {
 		gen_hamiltonian_soft(pm, b, h, occ);
 		lapack_eig(pm, h, eigval, eigvec);
 
 		memset(occ, 0, sizeof(occ));
-		for(k=0; k<pm->Ne; k++) for(i=0; i<pm->Ni; i++) occ[i] += square_complex(eigvec[pm->Nb*(k/2) + i]);
+		for(k=0; k<pm->Ne; k++) for(i=0; i<pm->N; i++) occ[i] += square_complex(eigvec[pm->Nb*(k/2) + i]);
 
 		h->e_grd = 0;
 		for(k=0; k<pm->Ne; k++) h->e_grd += eigval[k/2];
-		for(i=0; i<pm->Ni; i++) h->e_grd += E_XC(occ[i], pm->U, pm->beta);
-		for(i=0; i<pm->Ni; i++) h->e_grd -= E_XC_DERIV(occ[i], pm->U, pm->beta) * occ[i];
+		/*
+		for(i=0; i<pm->N;  i++) h->e_grd += E_XC(occ[i], pm->U, pm->beta);
+		for(i=0; i<pm->N;  i++) h->e_grd -= E_XC_DERIV(occ[i], pm->U, pm->beta) * occ[i];
+		*/
 
-		printf("%8d%12f", itr, h->e_grd); for(i=0; i<pm->Ni; i++) printf("%12f", occ[i]); printf("\n");
+		printf("%8d%12f", itr, h->e_grd); for(i=0; i<pm->N; i++) printf("%12f", occ[i]); printf("\n");
 
 		occ_tot = 0;
-		for(i=0; i<pm->Ni; i++) occ_tot += occ[i];
+		for(i=0; i<pm->N; i++) occ_tot += occ[i];
 		if(fabs(occ_tot - pm->Ne) > 1e-6) {
 			printf("\nERROR: occ_tot(%f) != Ne(%d)\n", occ_tot, pm->Ne);
 			exit(1);
@@ -182,30 +185,30 @@ void run_soft(params *pm, basis *b, hamiltonian *h, int verbose) {
 
 int main(int argc, char *argv[]) {
 	if(argc < 2) {
-		printf("Usage: %s <Ni> <Ne> <U> [verbose=0/1]\n\n", argv[0]);
+		printf("Usage: %s <N> <Ne> <U> [verbose=0/1]\n\n", argv[0]);
 		exit(1);
 	}
 
 	params pm = {
-		.Ni = atoi(argv[1]),
+		.N = atoi(argv[1]),
+		.Nx = pm.N,
 		.Ne = atoi(argv[2]),
-		.N  = pm.Ni,
-		.Nb = pm.Ni,
+		.Nb = pm.N,
 		.U = atof(argv[3]),
 	};
 	int verbose = argv[4] == NULL ? 0 : 1;
 	pm.beta = gen_beta(pm.U, verbose);
-	printf("Ni = %d\nNe = %d\nU = %f\nbeta = %f\n\n", pm.Ni, pm.Ne, pm.U, pm.beta);
+	printf("N = %d\nNe = %d\nU = %f\nbeta = %f\n\n", pm.N, pm.Ne, pm.U, pm.beta);
 
 	char dir_output[1024];
 	gen_dir_output(&pm, dir_output);
 
-	basis b[pm.Ni];
+	basis b[pm.N];
 	gen_basis_soft(&pm, b);
 	print_basis(&pm, b, dir_output, METHOD, verbose);
 
 	hamiltonian h = {
-		.nnz = pm.Ni * pm.Ni,
+		.nnz = pm.N * pm.N,
 		.row = (int*)malloc(sizeof(int) * h.nnz),
 		.col = (int*)malloc(sizeof(int) * h.nnz),
 		.val = (double_complex*)malloc(sizeof(double_complex) * h.nnz),

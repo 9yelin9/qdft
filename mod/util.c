@@ -19,7 +19,7 @@ void dec2bin(int len, int dec, char *bin) {
 }
 
 void gen_dir_output(params *pm, char *dir_output) {
-	sprintf(dir_output, "output/%s_Ni%d_Ne%d", SYSTEM, pm->Ni, pm->Ne);
+	sprintf(dir_output, "output/%s_N%d_Ne%d", SYSTEM, pm->N, pm->Ne);
 	mkdir(dir_output, 0755);
 }
 
@@ -29,14 +29,14 @@ void print_basis(params *pm, basis *b, char *dir_output, char *method, int verbo
 	FILE *f = fopen(fn, "w");
 
 	int i;
-	char buf[pm->N+2];
+	char buf[pm->Nx+2];
 
 	if(!verbose) freopen("/dev/null", "w", stdout);
 
 	printf("---------------- basis ----------------\n");
 	printf("%8s%8s%22s\n", "idx", "basis(10)", "basis(2)");
 	for(i=0; i<pm->Nb; i++) {
-		dec2bin(pm->N, b[i].val, buf);
+		dec2bin(pm->Nx, b[i].val, buf);
 		printf("%8d%8d%22s\n", b[i].idx, b[i].val, buf);
 		fprintf(f, "%8d%8d%22s\n", b[i].idx, b[i].val, buf);
 	}
