@@ -56,7 +56,7 @@ void gen_hamiltonian_fci(params *pm, basis *b, hamiltonian *h) {
 			p = (b[n].val >> i) & 1;
 			q = (b[n].val >> (i + pm->N)) & 1;
 			h_n[nnz_n].val += V(i) * (p + q) + pm->U * (p * q);
-			//h_n[nnz_n].val += 0;
+			//h_n[nnz_n].val += 0; 
 		}
 		nnz_n++;
 
@@ -98,13 +98,15 @@ void gen_hamiltonian_fci(params *pm, basis *b, hamiltonian *h) {
 }
 
 void run_fci(params *pm, basis *b, hamiltonian *h, int verbose) {
-	int n, i;
+	int i, n;
 	double occ_tot, occ[pm->N], eigval[pm->Nb];
 	double_complex eigvec[pm->Nb*pm->Nb];
 
 	gen_hamiltonian_fci(pm, b, h);
 	lapack_eig(pm, h, eigval, eigvec);
-	h->e_grd = eigval[0];
+	h->e_grd  = eigval[0];
+	for(i=0; i<16; i++) printf("%.2f\t", eigval[i]);
+	printf("\n");
 
 	save_hamiltonian(pm, h, METHOD);
 

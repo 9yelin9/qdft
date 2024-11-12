@@ -1,7 +1,7 @@
 include ../Makefile.inc
 
-OBJS = soft.o fci.o
-TARGETS = ../soft ../fci
+OBJS = fci.o soft.o
+TARGETS = ../fci ../soft ../lib/libsoft.so
 
 %.o : %.c
 	$(CC) $(CFLAGS) -c $<
@@ -13,5 +13,7 @@ clean :
 dep :
 	$(CC) $(CFLAGS) -M $(OBJS:.o=.c) 
 
-$(TARGETS) : ../% : %.o
-	$(CXX) $(LDLIBS) $(LDFLAGS) -o $@ $< $(LINKS)
+../fci ../soft : ../% : %.o
+	$(CC) $(LDLIBS) $(LDFLAGS) -o $@ $< $(LINKS)
+../lib/libsoft.so : soft.o
+	$(CC) $(LDLIBS) $(LDFLAGS) -shared -o $@ $< $(LINKS)

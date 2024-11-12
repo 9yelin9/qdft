@@ -4,6 +4,9 @@
 #include <gsl/gsl_roots.h>
 #include "hub1d.h"
 
+#define BETHE_ANSATZ(x)       (-(2. * x / M_PI) * sin(M_PI / x))
+#define BETHE_ANSATZ_DERIV(x) (-(2. / M_PI) * sin(M_PI / x) + (2. / x) * cos(M_PI / x))
+
 #define METHOD "soft"
 
 #define V(i) (i / 10.)
@@ -26,26 +29,26 @@ double bethe_ansatz_r_integrand(double x, void *v) {
 
 double bethe_ansatz(double x, void *v) {
 	double bethe_ansatz_l, bethe_ansatz_r;
-	bethe_ansatz_l = -(2. * x / M_PI) * sin(M_PI / x);
+	bethe_ansatz_l = BETHE_ANSATZ(x);
 	bethe_ansatz_r = *(double*)v;
 	return bethe_ansatz_l - bethe_ansatz_r;
 }
 
 double bethe_ansatz_deriv(double x, void *v) {
 	double bethe_ansatz_deriv_l, bethe_ansatz_deriv_r;
-	bethe_ansatz_deriv_l = -(2. / M_PI) * sin(M_PI / x) + (2. / x) * cos(M_PI / x);
+	bethe_ansatz_deriv_l = BETHE_ANSATZ_DERIV(x); 
 	bethe_ansatz_deriv_r = 0.;
 	return bethe_ansatz_deriv_l - bethe_ansatz_deriv_r;
 }
 
 void bethe_ansatz_fdf(double x, void *v, double *y, double *dy) {
 	double bethe_ansatz_l, bethe_ansatz_r;
-	bethe_ansatz_l = -(2. * x / M_PI) * sin(M_PI / x);
+	bethe_ansatz_l = BETHE_ANSATZ(x);
 	bethe_ansatz_r = *(double*)v;
 	*y = bethe_ansatz_l - bethe_ansatz_r;
 
 	double bethe_ansatz_deriv_l, bethe_ansatz_deriv_r;
-	bethe_ansatz_deriv_l = -(2. / M_PI) * sin(M_PI / x) + (2. / x) * cos(M_PI / x);
+	bethe_ansatz_deriv_l = BETHE_ANSATZ_DERIV(x);
 	bethe_ansatz_deriv_r = 0.;
 	*dy = bethe_ansatz_deriv_l - bethe_ansatz_deriv_r;
 }
@@ -115,6 +118,7 @@ void gen_hamiltonian_soft(params *pm, basis *b, hamiltonian *h, double *occ) {
 		h->row[h->nnz] = n;
 		h->col[h->nnz] = n;
 		h->val[h->nnz] = V(i) + E_XC_DERIV(occ[i], pm->U, pm->beta) + E_H_DERIV(occ[i], pm->U);
+		//h->val[h->nnz] = 0;
 		h->nnz++;
 
 		for(i=0; i<pm->N; i++) {
@@ -202,7 +206,7 @@ int main(int argc, char *argv[]) {
 	};
 	int verbose = argv[4] == NULL ? 0 : 1;
 	pm.beta = gen_beta(pm.U, verbose);
-	printf("N = %d\nNe = %d\nU = %f\nbeta = %f\n\n", pm.N, pm.Ne, pm.U, pm.beta);
+	printf("N = %d\nNe = %d\nNb = %d\nU = %f\nbeta = %f\n\n", pm.N, pm.Ne, pm.Nb, pm.U, pm.beta);
 
 	basis b[pm.N];
 	gen_basis_soft(&pm, b);
