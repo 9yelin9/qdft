@@ -43,7 +43,7 @@ void dec2bin(int len, int dec, char *bin);
 void gen_dir_output(params *pm, char *dir_output);
 void save_basis(params *pm, basis *b, char *method);
 void save_hamiltonian(params *pm, hamiltonian *H, char *method);
-double gen_beta(double U, int verbose);
+double gen_beta(double U);
 
 void lapack_eig(params *pm, hamiltonian *H, double *eigval, double_complex *eigvec); // LAPACK_zheev eigensolver (full matrix)
 

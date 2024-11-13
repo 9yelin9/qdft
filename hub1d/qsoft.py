@@ -33,7 +33,7 @@ class hamiltonian(Structure):
 				('e_grd',   c_double),
 				('val',     POINTER(c_double_complex))]
 
-class qsoft:
+class QSOFT:
 	def __init__(self, N, Ne, U):
 		self.method = 'qsoft'
 		self.libsoft = cdll.LoadLibrary('lib/libsoft.so')
@@ -56,11 +56,11 @@ class qsoft:
 
 		self.e_grd = 100 # init e_grd
 
-	def gen_beta(self, U, verbose=0):
+	def gen_beta(self, U):
 		gen_beta_c = self.libsoft.gen_beta
-		gen_beta_c.argtypes = [c_double, c_int]
+		gen_beta_c.argtypes = [c_double]
 		gen_beta_c.restype = c_double
-		return gen_beta_c(U, verbose)
+		return gen_beta_c(U)
 
 	def gen_basis_soft(self, pm, bs):
 		gen_basis_soft_c = self.libsoft.gen_basis_soft
@@ -222,5 +222,5 @@ if len(sys.argv) < 2:
 	print(f'Usage: {sys.argv[0]} <N> <Ne> <U> [n_layer=4]')
 	sys.exit(1)
 
-qs = qsoft(int(sys.argv[1]), int(sys.argv[2]), float(sys.argv[3]))
-qs.run_qsoft(n_layer=4 if len(sys.argv) == 4 else int(sys.argv[4]))
+qsoft = QSOFT(int(sys.argv[1]), int(sys.argv[2]), float(sys.argv[3]))
+qsoft.run_qsoft(n_layer=4 if len(sys.argv) == 4 else int(sys.argv[4]))

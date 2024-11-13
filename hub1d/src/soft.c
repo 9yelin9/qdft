@@ -53,7 +53,7 @@ void bethe_ansatz_fdf(double x, void *v, double *y, double *dy) {
 	*dy = bethe_ansatz_deriv_l - bethe_ansatz_deriv_r;
 }
 
-double gen_beta(double U, int verbose) {
+double gen_beta(double U) {
 	double bethe_ansatz_r, abserr;
 	gsl_function F = {
 		.function = &bethe_ansatz_r_integrand,
@@ -75,10 +75,8 @@ double gen_beta(double U, int verbose) {
 	gsl_root_fdfsolver *s=gsl_root_fdfsolver_alloc(T);
 	gsl_root_fdfsolver_set(s, &FDF, beta);
 
-	if(!verbose) freopen("/dev/null", "w", stdout);
-
-	printf("---------- gen_beta (secant method) ----------\n");
-	printf("%8s%16s%16s\n", "itr", "beta", "delta");
+	//printf("---------- gen_beta (secant method) ----------\n");
+	//printf("%8s%16s%16s\n", "itr", "beta", "delta");
 
 	int itr, itr_max=100, status;
 	for(itr=0; itr<itr_max; itr++) {
@@ -86,15 +84,13 @@ double gen_beta(double U, int verbose) {
 		beta = gsl_root_fdfsolver_root(s);
 		status = gsl_root_test_delta(beta, beta_old, 0, 1e-6);
 
-		printf("%8d%16f%16f\n", itr, beta, beta - beta_old);
+		//printf("%8d%16f%16f\n", itr, beta, beta - beta_old);
 
 		if(status == GSL_SUCCESS) break;
 		else beta_old = beta;
 	}
 	gsl_root_fdfsolver_free(s);
-	printf("----------------------------------------------\n\n");
-
-	if(!verbose) freopen("/dev/tty", "w", stdout);
+	//printf("----------------------------------------------\n\n");
 
 	return beta;
 }
@@ -146,12 +142,10 @@ void gen_hamiltonian_soft(params *pm, basis *b, hamiltonian *h, double *occ) {
 	}
 }
 
-void run_soft(params *pm, basis *b, hamiltonian *h, int verbose) {
+void run_soft(params *pm, basis *b, hamiltonian *h) {
 	int i, k, itr, itr_max=100;
 	double e_grd_old=100, occ_mix=0.1, occ_tot, occ[pm->N], occ_old[pm->N], eigval[pm->Nb];
 	double_complex eigvec[pm->Nb*pm->Nb];
-
-	if(!verbose) freopen("/dev/null", "w", stdout);
 
 	printf("------------------------------------------------ kohn-sham self-consistent field ------------------------------------------------\n");
 	printf("%8s%12s", "itr", "e_grd"); for(i=0; i<pm->N; i++) printf("%10s%02d", "occ", i); printf("\n");
@@ -187,13 +181,11 @@ void run_soft(params *pm, basis *b, hamiltonian *h, int verbose) {
 		for(i=0; i<pm->N; i++) occ[i] = (1 - occ_mix) * occ_old[i] + occ_mix * occ[i];
 	}
 	printf("---------------------------------------------------------------------------------------------------------------------------------\n\n");
-
-	if(!verbose) freopen("/dev/tty", "w", stdout);
 }
 
 int main(int argc, char *argv[]) {
 	if(argc < 2) {
-		printf("Usage: %s <N> <Ne> <U> [verbose]\n\n", argv[0]);
+		printf("Usage: %s <N> <Ne> <U>\n\n", argv[0]);
 		exit(1);
 	}
 
@@ -204,8 +196,7 @@ int main(int argc, char *argv[]) {
 		.Nb = pm.N,
 		.U = atof(argv[3]),
 	};
-	int verbose = argv[4] == NULL ? 0 : 1;
-	pm.beta = gen_beta(pm.U, verbose);
+	pm.beta = gen_beta(pm.U);
 	printf("N = %d\nNe = %d\nNb = %d\nU = %f\nbeta = %f\n\n", pm.N, pm.Ne, pm.Nb, pm.U, pm.beta);
 
 	basis b[pm.N];
@@ -218,7 +209,7 @@ int main(int argc, char *argv[]) {
 		.col = (int*)malloc(sizeof(int) * h.nnz),
 		.val = (double_complex*)malloc(sizeof(double_complex) * h.nnz),
 	};
-	run_soft(&pm, b, &h, 1);
+	run_soft(&pm, b, &h);
 	save_hamiltonian(&pm, &h, METHOD);
 
 	free(h.row);

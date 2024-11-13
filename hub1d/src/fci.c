@@ -97,7 +97,7 @@ void gen_hamiltonian_fci(params *pm, basis *b, hamiltonian *h) {
 	h->col_csc[n] = h->nnz;
 }
 
-void run_fci(params *pm, basis *b, hamiltonian *h, int verbose) {
+void run_fci(params *pm, basis *b, hamiltonian *h) {
 	int i, n;
 	double occ_tot, occ[pm->N], eigval[pm->Nb];
 	double_complex eigvec[pm->Nb*pm->Nb];
@@ -109,8 +109,6 @@ void run_fci(params *pm, basis *b, hamiltonian *h, int verbose) {
 	printf("\n");
 
 	save_hamiltonian(pm, h, METHOD);
-
-	if(!verbose) freopen("/dev/null", "w", stdout);
 
 	printf("------------------------------------------------ full configuration interaction ------------------------------------------------\n");
 	printf("%8s%12s", " ", "e_grd"); for(i=0; i<pm->N; i++) printf("%10s%02d", "occ", i); printf("\n");
@@ -127,8 +125,6 @@ void run_fci(params *pm, basis *b, hamiltonian *h, int verbose) {
 
 	printf("%8s%12f", " ", h->e_grd); for(i=0; i<pm->N; i++) printf("%12f", occ[i]); printf("\n");
 	printf("--------------------------------------------------------------------------------------------------------------------------------\n\n");
-
-	if(!verbose) freopen("/dev/tty", "w", stdout);
 }
 
 int main(int argc, char *argv[]) {
@@ -157,7 +153,7 @@ int main(int argc, char *argv[]) {
 		.col_csc = (int*)malloc(sizeof(int) * (pm.Nb + 1)),
 		.val = (double_complex*)malloc(sizeof(double_complex) * h.nnz),
 	};
-	run_fci(&pm, b, &h, 1);
+	run_fci(&pm, b, &h);
 
 	free(h.row);
 	free(h.col);
