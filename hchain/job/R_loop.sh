@@ -24,8 +24,8 @@ t0_string=$(date)
 np=4
 N=8
 
-for R in '1.0'
-#for R in `seq 0.7 0.1 3.0`
+for R in '1.00'
+#for R in `seq 0.70 0.10 3.00`
 do
 	./dft.py $N $R -i "true"
 	cd output/N${N}/dft_R${R}
