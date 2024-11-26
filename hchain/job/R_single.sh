@@ -4,14 +4,14 @@ t0=$(date +%s.%N)
 t0_string=$(date)
 
 np=4
-N=$1
-R=$2
+method=$1
+N=$2
+R=$3
 
-./dft.py $N $R -i "true"
-cd output/N${N}/dft_R${R}
+./run.py $method $N $R -i
+cd output/N${N}/${method}_R${R}
 mpirun -np $np vasp_std
 cd -
-./dft.py $N $R -o
 
 t1=$(date +%s.%N)
 t1_string=$(date)

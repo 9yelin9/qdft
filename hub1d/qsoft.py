@@ -1,19 +1,33 @@
 #!/usr/bin/env python3
 
+import io
 import os
 import sys
+import h5py
+import time
 import scipy
+import argparse
+import paramiko
+import subprocess
 import numpy as np
 import pennylane as qml
 from ctypes import *
 
 np.set_printoptions(suppress=True)
 
+parser = argparse.ArgumentParser()
+parser.add_argument('N', type=int)
+parser.add_argument('Ne', type=int)
+parser.add_argument('U', type=float)
+parser.add_argument('-l', '--n_layer', type=int, default=4)
+parser.add_argument('-gpu', '--use_gpu', action='store_true')
+args = parser.parse_args()
+
 class c_double_complex(Structure):
 	_fields_ = [('creal', c_double),
 				('cimag', c_double)]
 
-class params(Structure):
+class c_params(Structure):
 	_fields_ = [('N',    c_int),
 				('Nx',   c_int),
 				('Ne',   c_int),
@@ -21,11 +35,11 @@ class params(Structure):
 				('U',    c_double),
 				('beta', c_double)]
 
-class basis(Structure):
+class c_basis(Structure):
 	_fields_ = [('idx', c_int),
 				('val', c_int)]
 
-class hamiltonian(Structure):
+class c_hamiltonian(Structure):
 	_fields_ = [('nnz',     c_int),
 				('row',     POINTER(c_int)),
 				('col',     POINTER(c_int)),
@@ -34,7 +48,7 @@ class hamiltonian(Structure):
 				('val',     POINTER(c_double_complex))]
 
 class QSOFT:
-	def __init__(self, N, Ne, U):
+	def __init__(self, N, Ne, U, n_layer, use_gpu):
 		self.method = 'qsoft'
 		self.libsoft = cdll.LoadLibrary('lib/libsoft.so')
 
@@ -45,16 +59,34 @@ class QSOFT:
 		self.Nocc = (self.Ne + 1) // 2
 		self.U = U
 		self.beta = self.gen_beta(self.U)
-		print(f'N = {self.N}\nNe = {self.Ne}\nNb = {self.Nb}\nU = {self.U}\nbeta = {self.beta}', end='\n\n')
-
 		self.dir_output = f'output/N{self.N}_Ne{self.Ne}'
 		os.makedirs(self.dir_output, exist_ok=True)
 
+		self.dir_circuit = 'circuit'
+		self.path_run_circuit = f'{self.dir_circuit}/run_circuit_{self.method}.py'
 		self.wires = list(range(self.M))
-		self.dev = qml.device('default.qubit', wires=self.M)
-		self.qnode = qml.QNode(self.circuit, self.dev)
+		self.n_layer = n_layer
+		self.use_gpu = use_gpu
+		if self.use_gpu:
+			self.ssh = self.init_ssh('172.26.123.11', 'cmat')
+			self.run_circuit = self.run_circuit_gpu
+		else:
+			self.run_circuit = self.run_circuit_cpu
 
-		self.e_grd = 100 # init e_grd
+		print(f'N = {self.N}\nNe = {self.Ne}\nNb = {self.Nb}\nU = {self.U}\nbeta = {self.beta:f}\ndir_output = {self.dir_output}', end='\n\n')
+		print(f'n_layer = {self.n_layer}\nuse_gpu = {self.use_gpu}', end='\n\n')
+
+	def init_ssh(self, hostname, username):
+		ssh = paramiko.SSHClient()
+		ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+		ssh.connect(hostname, username=username)
+		ssh.exec_command(f'mkdir -p {self.dir_circuit}')
+
+		sftp = ssh.open_sftp()
+		sftp.put(f'{self.path_run_circuit}', f'/home/{username}/{self.path_run_circuit}')
+		sftp.close()
+
+		return ssh
 
 	def gen_beta(self, U):
 		gen_beta_c = self.libsoft.gen_beta
@@ -62,35 +94,38 @@ class QSOFT:
 		gen_beta_c.restype = c_double
 		return gen_beta_c(U)
 
-	def gen_basis_soft(self, pm, bs):
+	def gen_basis_soft(self, params, basis):
 		gen_basis_soft_c = self.libsoft.gen_basis_soft
-		gen_basis_soft_c.argtypes = [POINTER(params), POINTER(basis)]
-		gen_basis_soft_c(byref(pm), bs)
+		gen_basis_soft_c.argtypes = [POINTER(c_params), POINTER(c_basis)]
+		gen_basis_soft_c(byref(params), basis)
 
 	def init_soft(self):
-		pm = params(self.N, self.N, self.Ne, self.Nb, self.U, self.beta)
-		pm.beta = self.gen_beta(pm.U)
+		params = c_params(self.N, self.N, self.Ne, self.Nb, self.U, self.beta)
+		params.beta = self.gen_beta(params.U)
 
-		bs = (basis * pm.Nb)()
-		self.gen_basis_soft(pm, bs)
+		basis = (c_basis * params.Nb)()
+		self.gen_basis_soft(params, basis)
 
-		hs = hamiltonian(pm.Nb**2)
-		hs.row = (c_int * hs.nnz)()
-		hs.col = (c_int * hs.nnz)()
-		hs.val = (c_double_complex * hs.nnz)()
+		hamiltonian = c_hamiltonian(params.Nb**2)
+		hamiltonian.row = (c_int * hamiltonian.nnz)()
+		hamiltonian.col = (c_int * hamiltonian.nnz)()
+		hamiltonian.val = (c_double_complex * hamiltonian.nnz)()
 
-		return pm, bs, hs
+		gen_hamiltonian_soft_c = self.libsoft.gen_hamiltonian_soft
+		gen_hamiltonian_soft_c.argtypes = [POINTER(c_params), POINTER(c_basis), POINTER(c_hamiltonian), POINTER(c_double)]
+
+		return params, basis, hamiltonian, gen_hamiltonian_soft_c
 
 	def gen_basis_qsoft(self):
 		return np.array([list(np.binary_repr(i, width=self.M)) for i in range(self.Nb)], dtype='int')
 
-	def gen_projector(self, bq):
+	def gen_projector(self, basis):
 		X  = np.array([[0,   1], [1,  0]], dtype='complex')	
 		Y  = np.array([[0, -1j], [1j, 0]], dtype='complex')
 		iY = 1j * Y 
 
 		projector = []
-		for i, j in [(i, j) for i in bq for j in bq]:
+		for i, j in [(i, j) for i in basis for j in basis]:
 			p_ij = np.eye(self.Nb, dtype='complex')
 
 			for mu in self.wires:
@@ -102,45 +137,73 @@ class QSOFT:
 				else:             p = (X - sign * iY) @ (X + sign * iY) / 4
 				p_ij @= np.kron(np.kron(Il, p), Ir)
 			p_ij = (p_ij + p_ij.T.conj()) / 2
-			projector.append(qml.Hermitian(p_ij, wires=self.wires))
+			#projector.append(qml.Hermitian(p_ij, wires=self.wires))
+			projector.append(p_ij)
 
 		return projector
 
-	"""
-	def gen_projector(self, bq):
+	def gen_projector_malfunc(self, basis):
 		operator = [[lambda mu: qml.FermiA(mu) * qml.FermiC(mu), lambda mu: qml.FermiA(mu)],
 					[lambda mu: qml.FermiC(mu), lambda mu: qml.FermiC(mu) * qml.FermiA(mu)]]
 
 		projector = []
-		for i, j in [(i, j) for i in bq for j in bq]:
+		for i, j in [(i, j) for i in basis for j in basis]:
 			p_ij = qml.matrix(qml.fermi.jordan_wigner(np.prod([operator[i[mu]][j[mu]](mu) for mu in self.wires])))
 			p_ij = np.abs(p_ij + p_ij.T.conj()) / 2
 			projector.append(qml.Hermitian(p_ij, wires=self.wires))
-			#print(i, j, '\n', p_ij)
 
 		return projector
-	"""
 
-	def circuit(self, theta, bq, hq, n_layer):
-		qml.BasisState(bq, wires=self.wires)
-		#qml.templates.StronglyEntanglingLayers(theta.reshape((n_layer, self.M, 3)), wires=self.wires)
-		for m in self.wires: qml.RY(theta[m], wires=m)
-		for n in range(n_layer):
-			for m in self.wires[:-1]: qml.CNOT(wires=[m, m+1])
-			for m in self.wires:      qml.RY(theta[self.M * (n+1) + m], wires=m)
-		return qml.expval(hq), qml.probs(wires=self.wires)
+	def save_basis(self, basis):
+		fn = f'{self.dir_output}/{self.method}_basis.txt'
+		with open(fn, 'w') as f:
+			for idx, val in enumerate(basis):
+				val = ''.join(map(str, val))
+				f.write('%8d%8d%22s\n' % (idx, int(val, 2), val.zfill(self.M)))
+		print(f'{self.save_basis.__name__}: {fn}', end='\n\n')
 
-	def weight(self, k):
-		return (1 + self.Nocc - k) / (self.Nocc * (self.Nocc + 1) / 2)
+	def save_hamiltonian(self, hamiltonian, e_grd):
+		fn = f'{self.dir_output}/{self.method}_hamiltonian_U{self.U:.1f}_e{e_grd:f}.txt'
+		with open(fn, 'w') as f:
+			for idx, val in np.ndenumerate(hamiltonian):
+				f.write('%8d%8d%16f%16f\n' % (idx[0], idx[1], val.real, val.imag))
+		print(f'{self.save_hamiltonian.__name__}: {fn}', end='\n\n')
 
-	def energy_weighted(self, theta, bq, hq, n_layer):
-		return np.sum([self.qnode(theta, bq[k], hq, n_layer)[0] * self.weight(k) for k in range(self.Nocc)])
+	def init_circuit(self, theta, basis, hamiltonian, projector):
+		input = io.BytesIO()
+		with h5py.File(input, 'w') as f:
+			f.create_dataset('M', data=self.M)
+			f.create_dataset('n_layer', data=self.n_layer)
+			f.create_dataset('use_gpu', data=self.use_gpu)
+			f.create_dataset('theta', data=theta)
+			f.create_dataset('basis', data=basis[:self.Nocc])
+			f.create_dataset('hamiltonian', data=hamiltonian)
+			f.create_dataset('projector', data=projector)
+		input.seek(0)
+		return input
 
-	def energy(self, theta, bq, hq, n_layer):
-		return np.sum([self.qnode(theta, bq[i//2], hq, n_layer)[0] for i in range(self.Ne)])
+	def run_circuit_gpu(self, theta, basis, hamiltonian, projector):
+		input = self.init_circuit(theta, basis, hamiltonian, projector)
+		stdin, stdout, stderr = self.ssh.exec_command(f'python3 {self.path_run_circuit}')
+		stdin.write(input.getvalue())
+		stdin.channel.shutdown_write()
+		output = io.BytesIO(stdout.read())
+		with h5py.File(output, 'r') as f:
+			energy = f['energy'][:]
+			occupation = f['occupation'][:]
+		return energy, occupation
 
-	def occupation(self, theta, bq, hq, n_layer):
-		return np.sum([self.qnode(theta, bq[i//2], hq, n_layer)[1] for i in range(self.Ne)], axis=0)
+	def run_circuit_cpu(self, theta, basis, hamiltonian, projector):
+		input = self.init_circuit(theta, basis, hamiltonian, projector)
+		stdout = subprocess.run(['python3', f'{self.path_run_circuit}'], input=input.read(), capture_output=True).stdout
+		output = io.BytesIO(stdout)
+		with h5py.File(output, 'r') as f:
+			energy = f['energy'][:]
+			occupation = f['occupation'][:]
+		return energy, occupation
+
+	def energy_weighted(self, theta, basis, hamiltonian, projector, weight):
+		return (self.run_circuit(theta, basis, hamiltonian, projector)[0] * weight).sum()
 
 	def energy_hartree(self, occ):
 		return self.U * (occ / 2) * (occ / 2)
@@ -154,56 +217,42 @@ class QSOFT:
 		return self.energy_bethe(occ, self.beta) - self.energy_bethe(occ, 2) - self.energy_hartree(occ)
 	def energy_xc_deriv(self, occ):
 		return self.energy_bethe_deriv(occ, self.beta) - self.energy_bethe_deriv(occ, 2) - self.energy_hartree_deriv(occ)
-
-	def save_basis(self, bq):
-		fn = f'{self.dir_output}/{self.method}_basis.txt'
-		with open(fn, 'w') as f:
-			for idx, val in enumerate(bq):
-				val = ''.join(map(str, val))
-				f.write('%8d%8d%22s\n' % (idx, int(val, 2), val.zfill(self.M)))
-		print(f'{self.save_basis.__name__}: {fn}', end='\n\n')
-
-	def save_hamiltonian(self, hq, e_grd):
-		fn = f'{self.dir_output}/{self.method}_hamiltonian_U{self.U:.1f}_e{e_grd:f}.txt'
-		with open(fn, 'w') as f:
-			for idx, val in np.ndenumerate(hq):
-				f.write('%8d%8d%16f%16f\n' % (idx[0], idx[1], val.real, val.imag))
-		print(f'{self.save_hamiltonian.__name__}: {fn}', end='\n\n')
 	
-	def run_qsoft(self, n_layer=4, itr_max=100, occ_mix=0.1):	
-		pm, bs, hs = self.init_soft()
-		hs_sorted = np.zeros((self.Nb, self.Nb), dtype='complex')
-		gen_hamiltonian_soft_c = self.libsoft.gen_hamiltonian_soft
-		gen_hamiltonian_soft_c.argtypes = [POINTER(params), POINTER(basis), POINTER(hamiltonian), POINTER(c_double)]
+	def run_qsoft(self, itr_max=100, occ_mix=0.1):	
+		# SOFT
+		pm, bs, hs, gen_hamiltonian_soft_c = self.init_soft()
 
+		# QSOFT
+		hq = np.zeros((self.Nb, self.Nb), dtype='complex')
 		bq = self.gen_basis_qsoft()
 		pq = self.gen_projector(bq)
 		self.save_basis(bq)
+		weight = [(1 + self.Nocc - k) / (self.Nocc * (self.Nocc + 1) / 2) for k in range(self.Nocc)]
 
-		print(f'---------------------------------------- kohn-sham self-consistent field + vqe ({n_layer}-layer) ----------------------------------------');
+		# init
+		theta = np.full((self.M, self.n_layer+1), 0.5).ravel()
+		occ = np.full(self.N, 0.5)
+		e_grd = 100
+
+		print(f'---------------------------------------- kohn-sham self-consistent field + vqe ({self.n_layer}-layer) ----------------------------------------');
 		print('%8s%12s%s' % ('itr', 'e_grd', ''.join(['%10s%02d' % ('occ', i) for i in range(self.N)])))
-
-		#theta = np.full((n_layer, self.M, 3), 0.5) # init theta
-		theta = np.array([0.5 for _ in range(self.M * (n_layer+1))]) # init theta
-		occ = np.array([0.5 for _ in range(self.N)]) # init occ
-		e_grd = 100 # init e_grd
 		print('%8d%12s%s' % (0, '-', ''.join(map(lambda x: f'{x:12f}', occ))))
 
+		t0 = time.time()
 		for itr in range(1, itr_max+1):
 			e_grd_old = e_grd
 			occ_old = occ
 
-			hs_sorted.fill(0)
+			hq.fill(0)
 			gen_hamiltonian_soft_c(byref(pm), bs, byref(hs), (c_double * self.N)(*occ))
-			for i in range(hs.nnz): hs_sorted[hs.row[i], hs.col[i]] = hs.val[i].creal + 1j * hs.val[i].cimag
-			hq = qml.Hamiltonian(np.ravel(hs_sorted).real, pq)
-			#print(hs_sorted.reshape((self.Nb, self.Nb)), '\n', qml.matrix(hq))
+			for i in range(hs.nnz): hq[hs.row[i], hs.col[i]] = hs.val[i].creal + 1j * hs.val[i].cimag
 
-			res = scipy.optimize.minimize(self.energy_weighted, theta, args=(bq, hq, n_layer), method='L-BFGS-B', options={'disp': False})
+			res = scipy.optimize.minimize(self.energy_weighted, theta, args=(bq, hq, pq, weight), method='L-BFGS-B', options={'disp': False})
 
 			theta = res.x
-			occ = self.occupation(theta, bq, hq, n_layer)
-			e_grd = self.energy(theta, bq, hq, n_layer)
+			e_grd_single, occ_single = self.run_circuit(theta, bq, hq, pq)
+			occ = np.repeat(occ_single, 2, axis=0)[:self.Ne].sum(axis=0)
+			e_grd = np.repeat(e_grd_single, 2)[:self.Ne].sum()
 			e_grd += np.sum(self.energy_xc(occ) + self.energy_hartree(occ))
 			e_grd -= np.sum((self.energy_xc_deriv(occ_old) + self.energy_hartree_deriv(occ_old)) * occ)
 			print('%8d%12f%s' % (itr, e_grd, ''.join(map(lambda x: f'{x:12f}', occ))))
@@ -215,12 +264,12 @@ class QSOFT:
 
 			if np.abs(e_grd - e_grd_old) < 1e-6: break
 			occ = (1 - occ_mix) * occ_old + occ_mix * occ
-		print('---------------------------------------------------------------------------------------------------------------------------------', end='\n\n');
-		self.save_hamiltonian(qml.matrix(hq), e_grd)
+		t1 = time.time()
 
-if len(sys.argv) < 2:
-	print(f'Usage: {sys.argv[0]} <N> <Ne> <U> [n_layer=4]')
-	sys.exit(1)
+		print('---------------------------------------------------------------------------------------------------------------------------------');
+		print('time elapsed: %dm %ds' % divmod(int(t1 - t0), 60), end='\n\n')
+		self.save_hamiltonian(hq, e_grd)
+		if self.use_gpu: self.ssh.close()
 
-qsoft = QSOFT(int(sys.argv[1]), int(sys.argv[2]), float(sys.argv[3]))
-qsoft.run_qsoft(n_layer=4 if len(sys.argv) == 4 else int(sys.argv[4]))
+qsoft = QSOFT(args.N, args.Ne, args.U, args.n_layer, args.use_gpu)
+qsoft.run_qsoft()

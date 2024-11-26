@@ -1,0 +1,15 @@
+usage: run.py [-h] [-i [remove_old=true/false]] [-b [remove_old=true/false]]
+              [-o]
+              method N R
+run.py: error: argument R: invalid float value: 'R_range'
+./job/R_loop.sh: line 33: cd: output/N8/dft_RR_range: 그런 파일이나 디렉터리가 없습니다
+ Error reading item 'VCAIMAGES' from file INCAR.
+ Error reading item 'VCAIMAGES' from file INCAR.
+ Error reading item 'VCAIMAGES' from file INCAR.
+ Error reading item 'VCAIMAGES' from file INCAR.
+./job/R_loop.sh: line 35: cd: OLDPWD not set
+
+# Time Start   : 2024. 11. 21. (목) 21:15:00 KST
+# Time End     : 2024. 11. 21. (목) 21:15:03 KST
+# Time Elapsed : 0h 0m 2.806856903s
+

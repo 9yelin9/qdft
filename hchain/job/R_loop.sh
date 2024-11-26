@@ -1,13 +1,21 @@
 #!/bin/bash
 
+t0=$(date +%s.%N)
+t0_string=$(date)
+
+np=4
+method="dft"
+N=8
+
 if [[ "$0" == "$BASH_SOURCE" ]] && [[ "$1" != "bg" ]]; then
 	file_job=$(basename "$0")
-	file_log="log/${file_job%.*}_$(date +%Y%m%d).log"
+	file_log_prefix="log/${file_job%.*}_${method}_$(date +%Y%m%d)"
 
+	file_log="${file_log_prefix}.log"
 	cnt=1
 	while [[ -e "$file_log" ]]
 	do
-		file_log="log/${file_job%.*}_$(date +%Y%m%d)_${cnt}.log"
+		file_log="${file_log_prefix}_${cnt}.log"
 		((cnt++))
 	done
 	file_log="$(pwd)/${file_log}"
@@ -18,21 +26,13 @@ if [[ "$0" == "$BASH_SOURCE" ]] && [[ "$1" != "bg" ]]; then
 	exit 0
 fi
 
-t0=$(date +%s.%N)
-t0_string=$(date)
-
-np=4
-N=8
-
-for R in '1.00'
-#for R in `seq 0.70 0.10 3.00`
+for R in `seq 0.50 0.10 3.00`
 do
-	./dft.py $N $R -i "true"
-	cd output/N${N}/dft_R${R}
+	./run.py $method $N $R -i
+	cd output/N${N}/${method}_R${R}
 	mpirun -np $np vasp_std
 	cd -
-	./dft.py $N $R -o
-done
+done	
 
 t1=$(date +%s.%N)
 t1_string=$(date)
