@@ -1,87 +1,100 @@
 import os
+import time
 import shutil
 import numpy as np
-from pymatgen.core import Lattice, Structure, Molecule
-from pymatgen.io.vasp import Poscar, Potcar, PotcarSingle, Kpoints, Incar
-from pymatgen.io.vasp.outputs import Outcar
-from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
-from pymatgen.symmetry.bandstructure import HighSymmKpath
-
-path_pmgrc = '%s/.pmgrc.yaml' % os.environ['HOME']
-if not os.path.exists(path_pmgrc):
-	with open(path_pmgrc, 'w') as f:
-		f.write('PMG_VASP_PSP_DIR=/APP/enhpc/VASP/POT\n')
-PotcarSingle.functional_dir['PBE_54'] = 'PAW_PBE_54'
-PotcarSingle.functional_dir['LDA_54'] = 'PAW_LDA_54'
+from ase import Atoms
+from ase.calculators.vasp import Vasp
+from ase.calculators.espresso import Espresso, EspressoProfile
 
 class DFT:
-	def __init__(self, method, N, R):
+	def __init__(self, method, N, R, keep_old):
 		self.method = method
+		run_dft_dict = {
+			'vasp': self.run_dft_vasp(),
+			'espresso': self.run_dft_espresso(diagonalization='david'),
+			'qdft': self.run_dft_espresso(diagonalization='qdft'),
+		}
+		self.run_dft = run_dft_dict[self.method]
+
 		self.N = N
 		self.R = R
-		print(f'method={self.method}\nN = {self.N}\nR = {self.R}', end='\n\n')
+		self.dir_output = f'{os.getcwd()}/output/N{self.N}/{self.method}_R{self.R:.2f}'
+		if not keep_old:
+			if os.path.isdir(self.dir_output): shutil.rmtree(self.dir_output)
+			os.makedirs(self.dir_output, exist_ok=True)
 
-		self.dir_output = f'output/N{self.N}/{self.method}_R{self.R:.2f}'
-		os.makedirs(self.dir_output, exist_ok=True)
+		self.atom = 'H'
+		self.structure = Atoms(
+			self.atom * self.N,
+			positions=[[self.R * i, 0, 0] for i in range(self.N)],
+			cell=[self.R * self.N, 15, 15],
+			pbc=True,
+		)
 
-		fn_list = ['poscar', 'potcar', 'kpoints', 'incar', 'outcar']
-		self.fn = {fn: f'{self.dir_output}/{fn.upper()}' for fn in fn_list}
+		print(f'method={self.method}\nN = {self.N}\nR = {self.R}\ndir_output = {self.dir_output}', end='\n\n')
 
-		self.incar = {
-			'ENCUT': 300,  # Cutoff energy
-			'ISMEAR': 0,   # Gaussian smearing
-			'SIGMA': 0.20, # Smearing width
-			'EDIFF': 1E-6, # Convergence criteria for electronic steps
-			'ICHARG': 2,   # Initial charge density
-			'ISPIN': 2,	   # Spin-polarized calculation
-			'NUPDOWN': 0,  # Difference between spin up and down
-			'NELM': 100,   # Maximum iteration
-			'NSW': 0,	   # Ionic movement
-			'LWAVE': '.FALSE.',
-			'LCHARG': '.FALSE.',
-		}
-		if self.method == 'qdft':
-			self.incar['NELM'] = 0
-	
-	def remove_old(self, dir_name):
-		print(f'Remove {dir_name} ... ', end='')
-		shutil.rmtree(dir_name)
-		os.makedirs(dir_name)
-		print('Done', end='\n\n')
+	def run_dft_vasp(self):
+		t0 = time.time()
 
-	def gen_input(self, remove_old='true', atom='H'):
-		if remove_old == 'true': self.remove_old(self.dir_output)
+		calc = Vasp(
+			directory=self.dir_output,
+			command='mpirun -n 4 vasp_std',
+			encut=300,  # Cutoff energy
+			ismear=0,   # Gaussian smearing
+			sigma=0.20, # Smearing width
+			ediff=1e-6, # Convergence criteria for electronic steps
+			icharg=2,   # Initial charge density
+			nelm=100,   # Maximum iteration
+			nsw=0,		# Ionic movement
+			lwave='.FALSE.',
+			lcharg='.FALSE.',
+		)
+		self.structure.calc = calc
+		self.structure.get_potential_energy()
 
-		lattice = Lattice.from_parameters(a=15, b=15, c=self.R, alpha=90, beta=90, gamma=90)
-		structure = Structure(lattice, [atom], [[0, 0, 0]])
-		supercell = structure.copy().make_supercell([1, 1, self.N])
+		tm, ts = divmod(int(time.time() - t0), 60)
+		print(f'{self.run_dft_vasp.__name__} Done: {tm}m {ts}s', end='\n\n')
 
-		Poscar(supercell).write_file(f'{self.dir_output}/POSCAR')
-		Potcar(symbols=[atom], functional='PBE_54').write_file(f'{self.dir_output}/POTCAR')
-		Kpoints.gamma_automatic([1, 1, 1]).write_file(f'{self.dir_output}/KPOINTS')
-		Incar(self.incar).write_file(f'{self.dir_output}/INCAR')
-
-		print(f'{self.gen_input.__name__}:')
-		print(*[f'{self.dir_output}/{fn}' for fn in ['POSCAR', 'POTCAR', 'KPOINTS', 'INCAR']], sep='\n', end='\n\n')
-
-	def gen_band(self, remove_old='true'):
-		dir_band = f'{self.dir_output}/band'
-		os.makedirs(dir_band, exist_ok=True)
-		if remove_old == 'true': self.remove_old(dir_band)
+	def run_dft_espresso(self, diagonalization='david', pseudo_dir='/home/yerin/espresso/pseudo_pre'):
+		t0 = time.time()
 		
-		for fn in ['POSCAR', 'POTCAR', 'CHGCAR', 'WAVECAR', 'vasprun.xml']:
-			shutil.copyfile(f'{self.dir_output}/{fn}', f'{dir_band}/{fn}')
-		structure = Poscar.from_file(f'{dir_band}/POSCAR').structure
-		structure = SpacegroupAnalyzer(structure).get_primitive_standard_structure()
-		Kpoints.automatic_linemode(divisions=10, ibz=HighSymmKpath(structure)).write_file(f'{dir_band}/KPOINTS')
-		Incar(dict(self.incar, ICHARG=11)).write_file(f'{dir_band}/INCAR')
+		profile = EspressoProfile(
+			command='mpirun -n 4 pw.x',
+			pseudo_dir=pseudo_dir,
+		)
+		input_data = {
+			'control': {
+				'calculation': 'scf',
+				'restart_mode': 'from_scratch',
+				'pseudo_dir': pseudo_dir,
+				'outdir': self.dir_output,
+			},
+			'system': {
+				'nat': self.N,
+				'ntyp': 1,
+				'ibrav': 0,
+				'ecutwfc': 40,
+				'occupations': 'smearing',
+				'degauss': 0.2,
+			},
+			'electrons': {
+				'diagonalization': diagonalization,
+				'mixing_beta': 0.5,
+				'conv_thr': 1e-6,
+			},
+		}
+		pseudopotentials = {
+			'H': 'H_ONCV_PBE-1.0.oncvpsp.upf',
+		}
 
-		print(f'{self.gen_band.__name__}:')
-		print(*[f'{dir_band}/{fn}' for fn in ['POSCAR', 'POTCAR', 'CHGCAR', 'WAVECAR', 'vasprun.xml', 'KPOINTS', 'INCAR']], sep='\n', end='\n\n')
-	
-	def get_output(self):
-		outcar = Outcar(self.fn['outcar'])
+		calc = Espresso(
+			directory=self.dir_output,
+			profile=profile,
+			input_data=input_data,
+			pseudopotentials=pseudopotentials,
+		)
+		self.structure.calc = calc
+		self.structure.get_potential_energy()
 
-		print(f'Final energy: {outcar.final_energy:f} eV')
-		print(*outcar.final_energy_contribs.items(), sep='\n')
-		print()
+		tm, ts = divmod(int(time.time() - t0), 60)
+		print(f'{self.run_dft_espresso.__name__} Done: {tm}m {ts}s', end='\n\n')

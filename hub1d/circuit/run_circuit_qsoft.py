@@ -16,8 +16,8 @@ with h5py.File(input, 'r') as f:
 
 wires = list(range(M))
 hamiltonian = qml.Hamiltonian(hamiltonian.real.ravel(), [qml.Hermitian(p, wires=wires) for p in projector])
-dev = qml.device('lightning.gpu' if use_gpu else 'default.qubit', wires=M)
-print(qml.devices)
+if use_gpu: dev = qml.device('lightning.gpu', wires=M, batch_obs=True)
+else:       dev = qml.device('default.qubit', wires=M)
 
 @qml.qnode(dev)
 def circuit(theta, basis, hamiltonian):

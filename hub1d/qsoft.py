@@ -195,8 +195,8 @@ class QSOFT:
 
 	def run_circuit_cpu(self, theta, basis, hamiltonian, projector):
 		input = self.init_circuit(theta, basis, hamiltonian, projector)
-		stdout = subprocess.run(['python3', f'{self.path_run_circuit}'], input=input.read(), capture_output=True).stdout
-		output = io.BytesIO(stdout)
+		result = subprocess.run(['python3', f'{self.path_run_circuit}'], input=input.read(), capture_output=True)
+		output = io.BytesIO(result.stdout)
 		with h5py.File(output, 'r') as f:
 			energy = f['energy'][:]
 			occupation = f['occupation'][:]
@@ -264,10 +264,10 @@ class QSOFT:
 
 			if np.abs(e_grd - e_grd_old) < 1e-6: break
 			occ = (1 - occ_mix) * occ_old + occ_mix * occ
-		t1 = time.time()
+		tm, ts = divmod(int(time.time() - t0), 60)
 
 		print('---------------------------------------------------------------------------------------------------------------------------------');
-		print('time elapsed: %dm %ds' % divmod(int(t1 - t0), 60), end='\n\n')
+		print(f'{self.run_qsoft.__name__} Done: {tm}m {ts}s', end='\n\n')
 		self.save_hamiltonian(hq, e_grd)
 		if self.use_gpu: self.ssh.close()
 

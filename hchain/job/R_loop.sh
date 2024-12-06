@@ -3,11 +3,10 @@
 t0=$(date +%s.%N)
 t0_string=$(date)
 
-np=4
-method="dft"
+method=$1
 N=8
 
-if [[ "$0" == "$BASH_SOURCE" ]] && [[ "$1" != "bg" ]]; then
+if [[ "$0" == "$BASH_SOURCE" ]] && [[ "$2" != "bg" ]]; then
 	file_job=$(basename "$0")
 	file_log_prefix="log/${file_job%.*}_${method}_$(date +%Y%m%d)"
 
@@ -21,17 +20,14 @@ if [[ "$0" == "$BASH_SOURCE" ]] && [[ "$1" != "bg" ]]; then
 	file_log="$(pwd)/${file_log}"
 	echo $file_log
 
-	nohup "$0" bg "$@" > $file_log 2>&1 &
+	nohup "$0" "$method" bg "$@" > $file_log 2>&1 &
 	echo "Run in background (PID: $!)"
 	exit 0
 fi
 
 for R in `seq 0.50 0.10 3.00`
 do
-	./run.py $method $N $R -i
-	cd output/N${N}/${method}_R${R}
-	mpirun -np $np vasp_std
-	cd -
+	./run.py $method $N $R
 done	
 
 t1=$(date +%s.%N)
