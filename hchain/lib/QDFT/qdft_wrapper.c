@@ -1,14 +1,24 @@
+#include <stdio.h>
+#include <unistd.h>
 #include <Python.h>
 
-double run_qdft(double a, double b) {
-	PyObject *pModule, *pFunc, *pArgs, *pValue;
-	double res=0;
+#define QDFT_PATH "/home/yerin/qdft/hchain/lib/QDFT"
 
+double run_qdft_(double a, double b) {
+	double res;
+	PyObject *pPath, *pModule, *pFunc, *pArgs, *pValue;
+
+	//PyErr_Print();
 	Py_Initialize();
-	PyRun_SimpleString("import sys; sys.path.append('.')");
+
+	pPath = PySys_GetObject("path");
+	PyList_Append(pPath, PyUnicode_FromString(QDFT_PATH));
+	PyErr_Print();
 
 	pModule = PyImport_ImportModule("qdft");
+	PyErr_Print();
 	pFunc = PyObject_GetAttrString(pModule, "run_qdft");
+	PyErr_Print();
 	pArgs = PyTuple_Pack(2, PyFloat_FromDouble(a), PyFloat_FromDouble(b));
 	pValue = PyObject_CallObject(pFunc, pArgs);
 
@@ -18,10 +28,17 @@ double run_qdft(double a, double b) {
 	Py_DECREF(pFunc);
 	Py_DECREF(pArgs);
 	Py_DECREF(pValue);
-
 	Py_Finalize();
 
 	printf("%f\t%f\t%f\n", a, b, res);
 
 	return res;
 }
+
+/*
+int main() {
+	double a=3.0, b=5.0;
+	run_qdft_(a, b);
+	return 0;
+}
+*/

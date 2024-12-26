@@ -19,4 +19,6 @@ if not args.method in ['vasp', 'espresso', 'qdft']:
 	sys.exit(1)
 
 dft = DFT(args.method, args.N, args.R, keep_old=args.keep_old)
-dft.run_dft
+if args.method == 'espresso': dft.run_dft_espresso(diagonalization='david')
+elif args.method == 'qdft': dft.run_dft_espresso(diagonalization='qdft')
+else: dft.run_dft_vasp()

@@ -9,13 +9,6 @@ from ase.calculators.espresso import Espresso, EspressoProfile
 class DFT:
 	def __init__(self, method, N, R, keep_old):
 		self.method = method
-		run_dft_dict = {
-			'vasp': self.run_dft_vasp(),
-			'espresso': self.run_dft_espresso(diagonalization='david'),
-			'qdft': self.run_dft_espresso(diagonalization='qdft'),
-		}
-		self.run_dft = run_dft_dict[self.method]
-
 		self.N = N
 		self.R = R
 		self.dir_output = f'{os.getcwd()}/output/N{self.N}/{self.method}_R{self.R:.2f}'
