@@ -144,9 +144,6 @@ class DFT:
 		with open(f'{self.dir_output}/{basename}.p2win', 'r') as fi, open(f'{self.dir_output}/{basename}.p2wout', 'w') as fo:
 			subprocess.run(['mpirun', '-n', self.np, 'pw2wannier90.x'], cwd=self.dir_output, stdin=fi, stdout=fo)
 		subprocess.run(['wannier90.x', basename], cwd=self.dir_output)
-
-		with open(f'{self.dir_output}/{basename}_hr.dat', 'r') as f:
-			pass
 		tm, ts = divmod(int(time.time() - t0), 60)
 
 		print(f'{self.run_wannier.__name__} Done: {tm}m {ts}s', end='\n\n')

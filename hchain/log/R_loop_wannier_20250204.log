@@ -1,0 +1,343 @@
+method=wannier
+N = 8
+R = 0.5
+dir_output = /home/yerin/qdft/hchain/output/N8/wannier_R0.50
+
+run_espresso{'calculation': 'scf', 'kpts': None, 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 2s
+
+run_espresso{'calculation': 'nscf', 'kpts': (4, 1, 1), 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 3s
+
+run_wannier Done: 0m 12s
+
+method=wannier
+N = 8
+R = 0.6
+dir_output = /home/yerin/qdft/hchain/output/N8/wannier_R0.60
+
+run_espresso{'calculation': 'scf', 'kpts': None, 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 3s
+
+run_espresso{'calculation': 'nscf', 'kpts': (4, 1, 1), 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 4s
+
+run_wannier Done: 0m 14s
+
+method=wannier
+N = 8
+R = 0.7
+dir_output = /home/yerin/qdft/hchain/output/N8/wannier_R0.70
+
+run_espresso{'calculation': 'scf', 'kpts': None, 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 3s
+
+run_espresso{'calculation': 'nscf', 'kpts': (4, 1, 1), 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 6s
+
+run_wannier Done: 0m 17s
+
+method=wannier
+N = 8
+R = 0.8
+dir_output = /home/yerin/qdft/hchain/output/N8/wannier_R0.80
+
+run_espresso{'calculation': 'scf', 'kpts': None, 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 4s
+
+run_espresso{'calculation': 'nscf', 'kpts': (4, 1, 1), 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 7s
+
+run_wannier Done: 0m 19s
+
+method=wannier
+N = 8
+R = 0.9
+dir_output = /home/yerin/qdft/hchain/output/N8/wannier_R0.90
+
+run_espresso{'calculation': 'scf', 'kpts': None, 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 6s
+
+run_espresso{'calculation': 'nscf', 'kpts': (4, 1, 1), 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 8s
+
+run_wannier Done: 0m 21s
+
+method=wannier
+N = 8
+R = 1.0
+dir_output = /home/yerin/qdft/hchain/output/N8/wannier_R1.00
+
+run_espresso{'calculation': 'scf', 'kpts': None, 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 6s
+
+run_espresso{'calculation': 'nscf', 'kpts': (4, 1, 1), 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 6s
+
+run_wannier Done: 0m 23s
+
+method=wannier
+N = 8
+R = 1.1
+dir_output = /home/yerin/qdft/hchain/output/N8/wannier_R1.10
+
+run_espresso{'calculation': 'scf', 'kpts': None, 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 4s
+
+run_espresso{'calculation': 'nscf', 'kpts': (4, 1, 1), 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 7s
+
+run_wannier Done: 0m 26s
+
+method=wannier
+N = 8
+R = 1.2
+dir_output = /home/yerin/qdft/hchain/output/N8/wannier_R1.20
+
+run_espresso{'calculation': 'scf', 'kpts': None, 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 3s
+
+run_espresso{'calculation': 'nscf', 'kpts': (4, 1, 1), 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 9s
+
+run_wannier Done: 0m 29s
+
+method=wannier
+N = 8
+R = 1.3
+dir_output = /home/yerin/qdft/hchain/output/N8/wannier_R1.30
+
+run_espresso{'calculation': 'scf', 'kpts': None, 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 2s
+
+run_espresso{'calculation': 'nscf', 'kpts': (4, 1, 1), 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 10s
+
+run_wannier Done: 0m 31s
+
+method=wannier
+N = 8
+R = 1.4
+dir_output = /home/yerin/qdft/hchain/output/N8/wannier_R1.40
+
+run_espresso{'calculation': 'scf', 'kpts': None, 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 3s
+
+run_espresso{'calculation': 'nscf', 'kpts': (4, 1, 1), 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 17s
+
+run_wannier Done: 0m 33s
+
+method=wannier
+N = 8
+R = 1.5
+dir_output = /home/yerin/qdft/hchain/output/N8/wannier_R1.50
+
+run_espresso{'calculation': 'scf', 'kpts': None, 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 3s
+
+run_espresso{'calculation': 'nscf', 'kpts': (4, 1, 1), 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 15s
+
+run_wannier Done: 0m 35s
+
+method=wannier
+N = 8
+R = 1.6
+dir_output = /home/yerin/qdft/hchain/output/N8/wannier_R1.60
+
+run_espresso{'calculation': 'scf', 'kpts': None, 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 3s
+
+run_espresso{'calculation': 'nscf', 'kpts': (4, 1, 1), 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 10s
+
+run_wannier Done: 0m 37s
+
+method=wannier
+N = 8
+R = 1.7
+dir_output = /home/yerin/qdft/hchain/output/N8/wannier_R1.70
+
+run_espresso{'calculation': 'scf', 'kpts': None, 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 3s
+
+run_espresso{'calculation': 'nscf', 'kpts': (4, 1, 1), 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 7s
+
+run_wannier Done: 0m 41s
+
+method=wannier
+N = 8
+R = 1.8
+dir_output = /home/yerin/qdft/hchain/output/N8/wannier_R1.80
+
+run_espresso{'calculation': 'scf', 'kpts': None, 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 4s
+
+run_espresso{'calculation': 'nscf', 'kpts': (4, 1, 1), 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 7s
+
+run_wannier Done: 0m 43s
+
+method=wannier
+N = 8
+R = 1.9
+dir_output = /home/yerin/qdft/hchain/output/N8/wannier_R1.90
+
+run_espresso{'calculation': 'scf', 'kpts': None, 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 4s
+
+run_espresso{'calculation': 'nscf', 'kpts': (4, 1, 1), 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 7s
+
+run_wannier Done: 0m 45s
+
+method=wannier
+N = 8
+R = 2.0
+dir_output = /home/yerin/qdft/hchain/output/N8/wannier_R2.00
+
+run_espresso{'calculation': 'scf', 'kpts': None, 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 3s
+
+run_espresso{'calculation': 'nscf', 'kpts': (4, 1, 1), 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 8s
+
+run_wannier Done: 0m 48s
+
+method=wannier
+N = 8
+R = 2.1
+dir_output = /home/yerin/qdft/hchain/output/N8/wannier_R2.10
+
+run_espresso{'calculation': 'scf', 'kpts': None, 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 3s
+
+run_espresso{'calculation': 'nscf', 'kpts': (4, 1, 1), 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 8s
+
+run_wannier Done: 0m 49s
+
+method=wannier
+N = 8
+R = 2.2
+dir_output = /home/yerin/qdft/hchain/output/N8/wannier_R2.20
+
+run_espresso{'calculation': 'scf', 'kpts': None, 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 4s
+
+run_espresso{'calculation': 'nscf', 'kpts': (4, 1, 1), 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 9s
+
+run_wannier Done: 0m 52s
+
+method=wannier
+N = 8
+R = 2.3
+dir_output = /home/yerin/qdft/hchain/output/N8/wannier_R2.30
+
+run_espresso{'calculation': 'scf', 'kpts': None, 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 5s
+
+run_espresso{'calculation': 'nscf', 'kpts': (4, 1, 1), 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 9s
+
+run_wannier Done: 0m 54s
+
+method=wannier
+N = 8
+R = 2.4
+dir_output = /home/yerin/qdft/hchain/output/N8/wannier_R2.40
+
+run_espresso{'calculation': 'scf', 'kpts': None, 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 5s
+
+run_espresso{'calculation': 'nscf', 'kpts': (4, 1, 1), 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 9s
+
+run_wannier Done: 0m 59s
+
+method=wannier
+N = 8
+R = 2.5
+dir_output = /home/yerin/qdft/hchain/output/N8/wannier_R2.50
+
+run_espresso{'calculation': 'scf', 'kpts': None, 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 5s
+
+run_espresso{'calculation': 'nscf', 'kpts': (4, 1, 1), 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 10s
+
+run_wannier Done: 0m 59s
+
+method=wannier
+N = 8
+R = 2.6
+dir_output = /home/yerin/qdft/hchain/output/N8/wannier_R2.60
+
+run_espresso{'calculation': 'scf', 'kpts': None, 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 6s
+
+run_espresso{'calculation': 'nscf', 'kpts': (4, 1, 1), 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 10s
+
+run_wannier Done: 1m 2s
+
+method=wannier
+N = 8
+R = 2.7
+dir_output = /home/yerin/qdft/hchain/output/N8/wannier_R2.70
+
+run_espresso{'calculation': 'scf', 'kpts': None, 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 6s
+
+run_espresso{'calculation': 'nscf', 'kpts': (4, 1, 1), 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 11s
+
+run_wannier Done: 1m 4s
+
+method=wannier
+N = 8
+R = 2.8
+dir_output = /home/yerin/qdft/hchain/output/N8/wannier_R2.80
+
+run_espresso{'calculation': 'scf', 'kpts': None, 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 6s
+
+run_espresso{'calculation': 'nscf', 'kpts': (4, 1, 1), 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 11s
+
+run_wannier Done: 1m 6s
+
+method=wannier
+N = 8
+R = 2.9
+dir_output = /home/yerin/qdft/hchain/output/N8/wannier_R2.90
+
+run_espresso{'calculation': 'scf', 'kpts': None, 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 7s
+
+run_espresso{'calculation': 'nscf', 'kpts': (4, 1, 1), 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 11s
+
+run_wannier Done: 1m 13s
+
+method=wannier
+N = 8
+R = 3.0
+dir_output = /home/yerin/qdft/hchain/output/N8/wannier_R3.00
+
+run_espresso{'calculation': 'scf', 'kpts': None, 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 6s
+
+run_espresso{'calculation': 'nscf', 'kpts': (4, 1, 1), 'diagonalization': 'david', 'pseudo_dir': '/home/yerin/espresso/pseudo_pre'}
+Done: 0m 11s
+
+run_wannier Done: 1m 11s
+
+
+# Time Start   : 2025. 02. 04. (화) 14:44:21 KST
+# Time End     : 2025. 02. 04. (화) 15:08:56 KST
+# Time Elapsed : 0h 24m 35.505614273s
+
