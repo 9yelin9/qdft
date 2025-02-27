@@ -8,6 +8,7 @@ import numpy as np
 from ase import Atoms
 from ase.dft.kpoints import monkhorst_pack
 from ase.calculators.vasp import Vasp
+from ase.calculators.openmx import OpenMX
 from ase.calculators.espresso import Espresso, EspressoProfile
 
 class DFT:
@@ -33,7 +34,7 @@ class DFT:
 		print(f'method={self.method}\nN = {self.N}\nR = {self.R}\ndir_output = {self.dir_output}', end='\n\n')
 
 	def run_vasp(self):
-		calc = Vasp(
+		self.atoms.calc = Vasp(
 			directory=self.dir_output,
 			command=f'mpirun -n {self.np} vasp_std',
 			encut=300,  # Cutoff energy
@@ -46,7 +47,6 @@ class DFT:
 			lwave='.FALSE.',
 			lcharg='.FALSE.',
 		)
-		self.atoms.calc = calc
 
 		t0 = time.time()
 		self.atoms.get_potential_energy()
@@ -88,14 +88,13 @@ class DFT:
 			'H': 'H_ONCV_PBE-1.0.oncvpsp.upf',
 		}
 
-		calc = Espresso(
+		self.atoms.calc = Espresso(
 			directory=self.dir_output,
 			profile=profile,
 			input_data=input_data,
 			pseudopotentials=pseudopotentials,
 			kpts=kpts,
 		)
-		self.atoms.calc = calc
 
 		t0 = time.time()
 		try: self.atoms.get_potential_energy()
@@ -106,7 +105,7 @@ class DFT:
 
 		print(f'{self.run_espresso.__name__}{args}\nDone: {tm}m {ts}s', end='\n\n')
 
-	def run_wannier(self, kpts=(4, 1, 1), basename='wannier', use_vqe=False):
+	def run_wannier(self, kpts=(4, 1, 1), basename='wannier'):
 		self.run_espresso()
 		self.run_espresso(calculation='nscf', kpts=kpts)
 
@@ -147,3 +146,26 @@ class DFT:
 		tm, ts = divmod(int(time.time() - t0), 60)
 
 		print(f'{self.run_wannier.__name__} Done: {tm}m {ts}s', end='\n\n')
+
+	def run_openmx(self, eigensolver='cluster'):
+		self.atoms.calc = OpenMX(
+			label=self.dir_output + '/openmx',
+			data_path='/home/yerin/openmx3.9/DFT_DATA19',
+			command='openmx',
+			mpi={'processes': 4},
+			xc='LDA',
+			maxiter=100,
+			energy_cutoff=150.,
+			smearing=300,
+			kpts=(1, 1, 1),
+			convergence=1e-6,
+			spinpol=None,
+			eigensolver=eigensolver,
+			mixer='rmm-diis',
+		)
+
+		t0 = time.time()
+		self.atoms.get_potential_energy()
+		tm, ts = divmod(int(time.time() - t0), 60)
+
+		print(f'{self.run_openmx.__name__} Done: {tm}m {ts}s', end='\n\n')

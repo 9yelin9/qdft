@@ -25,6 +25,7 @@ if [[ "$0" == "$BASH_SOURCE" ]] && [[ "$2" != "bg" ]]; then
 	exit 0
 fi
 
+#./run.py $method $N 1
 for R in `seq 0.50 0.10 3.00`
 do
 	./run.py $method $N $R
