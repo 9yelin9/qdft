@@ -1,29 +1,15 @@
 #!/bin/bash
-
-t0=$(date +%s.%N)
-t0_string=$(date)
+#$ -S /bin/bash
+#$ -q all.q
+#$ -j y
+#$ -cwd
+#$ -o log/
 
 method=$1
 N=8
 
-if [[ "$0" == "$BASH_SOURCE" ]] && [[ "$2" != "bg" ]]; then
-	file_job=$(basename "$0")
-	file_log_prefix="log/${file_job%.*}_${method}_$(date +%Y%m%d)"
-
-	file_log="${file_log_prefix}.log"
-	cnt=1
-	while [[ -e "$file_log" ]]
-	do
-		file_log="${file_log_prefix}_${cnt}.log"
-		((cnt++))
-	done
-	file_log="$(pwd)/${file_log}"
-	echo $file_log
-
-	nohup "$0" "$method" bg "$@" > $file_log 2>&1 &
-	echo "Run in background (PID: $!)"
-	exit 0
-fi
+t0=$(date +%s.%N)
+t0_string=$(date)
 
 #./run.py $method $N 1
 for R in `seq 0.50 0.10 3.00`
