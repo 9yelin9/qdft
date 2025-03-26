@@ -31,9 +31,16 @@ class DFT:
 			pbc=True,
 		)
 
-		print(f'method={self.method}\nN = {self.N}\nR = {self.R}\nnp = {self.np}\ndir_output = {self.dir_output}', end='\n\n')
+	def print_params(self):
+		print(f'method={self.method}')
+		print(f'N = {self.N}')
+		print(f'R = {self.R}')
+		print(f'np = {self.np}')
+		print(f'dir_output = {self.dir_output}', end='\n\n')
 
 	def run_vasp(self):
+		self.print_params()
+
 		self.atoms.calc = Vasp(
 			directory=self.dir_output,
 			command=f'mpirun -n {self.np} vasp_std',
@@ -55,6 +62,7 @@ class DFT:
 		print(f'{self.run_vasp.__name__} Done: {tm}m {ts}s', end='\n\n')
 
 	def run_espresso(self, calculation='scf', kpts=None, diagonalization='david', pseudo_dir='/home/yerin/espresso/pseudo_pre'):
+		self.print_params()
 		args = locals(); del args['self']
 		
 		profile = EspressoProfile(
@@ -148,6 +156,8 @@ class DFT:
 		print(f'{self.run_wannier.__name__} Done: {tm}m {ts}s', end='\n\n')
 
 	def run_openmx(self, eigensolver='cluster'):
+		self.print_params()
+
 		self.atoms.calc = OpenMX(
 			label=self.dir_output + '/openmx',
 			data_path='/home/yerin/openmx3.9/DFT_DATA19',

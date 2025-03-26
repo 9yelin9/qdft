@@ -21,7 +21,10 @@
 #define  measure_time   0
 
 #define VQE_PATH "/home/yerin/qdft/hchain/lib"
+#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+
 #include <Python.h>
+#include <numpy/arrayobject.h>
 
 static double Lapack_LU_Dinverse(int n, double *A);
 static double Calc_Oscillator_Strength( int n, int UMOmax, int Nocc[2], int *MP,
@@ -91,47 +94,24 @@ static double Calc_DM_Cluster_collinear(int myid0,
 					int *SP_NZeros,
 					int *SP_Atoms );
 
-void VQE(int *na, int *nev, double *a, int *lda, double *ev, double *q, int *ldq, int *nblk) {
-  int i, j;
-  PyObject *pPath, *pModule, *pFunc, *pArgs, *pValue;
-  PyObject *pa, *pev, *pq, *n;
+void VQE(PyObject *pInst, int *na, double *a, double *ev, double *q) {
+  int i, n=*na;
+  double *ev_py, *q_py;
+  PyObject *a_py, *res;
+  npy_intp dim[1]={n*n};
 
-  pa  = PyTuple_New(*na**lda);
-  pev = PyTuple_New(*na);
-  pq  = PyTuple_New(*na**ldq);
-  PyErr_Print();
+  a_py = PyArray_SimpleNewFromData(1, dim, NPY_DOUBLE, (void*)a);
 
-  for(i=0; i<*na; i++) {
-	  PyTuple_SET_ITEM(pev, i, PyFloat_FromDouble(ev[i]));
-	  PyErr_Print();
-	  for(j=0; j<*lda; j++) PyTuple_SET_ITEM(pa, *lda*i + j, PyFloat_FromDouble(a[*lda*i + j]));
-	  for(j=0; j<*ldq; j++) PyTuple_SET_ITEM(pq, *ldq*i + j, PyFloat_FromDouble(q[*ldq*i + j]));
-  }
+  res = PyObject_CallMethod(pInst, "vqe", "O", a_py);
 
-  Py_Initialize();
-  pPath = PySys_GetObject("path");
-  PyList_Append(pPath, PyUnicode_FromString(VQE_PATH));
-  
-  pModule = PyImport_ImportModule("vqe"); //PyErr_Print();
-  pFunc = PyObject_GetAttrString(pModule, "vqe");
-  
-  pArgs = PyTuple_Pack(8,
-		  PyLong_FromLong(*na),
-		  PyLong_FromLong(*nev),
-		  pa,
-		  PyLong_FromLong(*lda),
-		  pev,
-		  pq,
-		  PyLong_FromLong(*ldq),
-		  PyLong_FromLong(*nblk));
-  pValue = PyObject_CallObject(pFunc, pArgs);
-  
-  Py_DECREF(pPath);
-  Py_DECREF(pModule);
-  Py_DECREF(pFunc);
-  Py_DECREF(pArgs);
-  Py_DECREF(pValue);
-  Py_Finalize();
+  ev_py = (double*)PyArray_DATA((PyArrayObject*)PyTuple_GetItem(res, 0));
+  q_py  = (double*)PyArray_DATA((PyArrayObject*)PyTuple_GetItem(res, 1));
+
+  for(i=0; i<n; i++) ev[i] = ev_py[i];
+  for(i=0; i<n*n; i++) q[i] = q_py[i];
+
+  Py_DECREF(res);
+  Py_DECREF(a_py);
 }
 
 double Cluster_DFT_VQE(
@@ -228,7 +208,7 @@ double Cluster_DFT_VQE(
 
   MPI_Comm_size(MPI_CommWD1[myworld1],&numprocs1);
   MPI_Comm_rank(MPI_CommWD1[myworld1],&myid1);
-
+  
   /****************************************************
              calculation of the array size
   ****************************************************/
@@ -239,6 +219,19 @@ double Cluster_DFT_VQE(
     n = n + Spe_Total_CNO[wanA];
   }
   n2 = n + 2;
+
+  /* python setting */
+  PyObject *pPath, *pModule, *pClass, *pArgs, *pInst;
+
+  pPath = PySys_GetObject("path"); //PyErr_Print();
+  PyList_Append(pPath, PyUnicode_FromString(VQE_PATH));
+  
+  pModule = PyImport_ImportModule("qdft");
+  pClass = PyObject_GetAttrString(pModule, "QDFT");
+  pArgs = PyTuple_Pack(1, PyLong_FromLong(n));
+  pInst = PyObject_CallObject(pClass, pArgs);
+
+  _import_array();
 
   /****************************************************
    Allocation
@@ -590,7 +583,9 @@ double Cluster_DFT_VQE(
   MPI_Comm_free(&mpi_comm_rows);
   MPI_Comm_free(&mpi_comm_cols);
   */
-  VQE(&n, &MaxN, Hs, &na_rows, &ko[spin][1], Cs, &na_rows, &nblk);
+
+  /* VQE */
+  VQE(pInst, &n, Hs, &ko[spin][1], Cs);
 
   if (measure_time){
     dtime(&etime);
@@ -1496,6 +1491,12 @@ double Cluster_DFT_VQE(
   free(Num_Snd_EV);
   free(ie1);
   free(is1);
+
+  Py_DECREF(pInst);
+  Py_DECREF(pArgs);
+  Py_DECREF(pClass);
+  Py_DECREF(pModule);
+  Py_DECREF(pPath);
 
   /* for elapsed time */
 
