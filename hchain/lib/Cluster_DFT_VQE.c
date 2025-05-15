@@ -20,12 +20,6 @@
 
 #define  measure_time   0
 
-#define VQE_PATH "/home/yerin/qdft/hchain/lib"
-#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
-
-#include <Python.h>
-#include <numpy/arrayobject.h>
-
 static double Lapack_LU_Dinverse(int n, double *A);
 static double Calc_Oscillator_Strength( int n, int UMOmax, int Nocc[2], int *MP,
                                         int **ind2ind, 
@@ -96,22 +90,24 @@ static double Calc_DM_Cluster_collinear(int myid0,
 
 void VQE(PyObject *pInst, int *na, double *a, double *ev, double *q) {
   int i, n=*na;
-  double *ev_py, *q_py;
-  PyObject *a_py, *res;
-  npy_intp dim[1]={n*n};
+  PyObject *res, *a_list, *ev_list, *q_list;
 
-  a_py = PyArray_SimpleNewFromData(1, dim, NPY_DOUBLE, (void*)a);
+  PyErr_Print();
+  a_list = PyList_New(n*n);
+  for(i=0; i<n*n; i++) PyList_SetItem(a_list, i, PyFloat_FromDouble(a[i]));
 
-  res = PyObject_CallMethod(pInst, "vqe", "O", a_py);
+  res = PyObject_CallMethod(pInst, "vqe", "O", a_list);
 
-  ev_py = (double*)PyArray_DATA((PyArrayObject*)PyTuple_GetItem(res, 0));
-  q_py  = (double*)PyArray_DATA((PyArrayObject*)PyTuple_GetItem(res, 1));
+  ev_list = PyTuple_GetItem(res, 0);
+  q_list  = PyTuple_GetItem(res, 1);
 
-  for(i=0; i<n; i++) ev[i] = ev_py[i];
-  for(i=0; i<n*n; i++) q[i] = q_py[i];
+  for(i=0; i<n; i++) ev[i] = PyFloat_AsDouble(PyList_GetItem(ev_list, i));
+  for(i=0; i<n*n; i++) q[i] = PyFloat_AsDouble(PyList_GetItem(q_list, i));
 
+  Py_DECREF(a_list);
+  Py_DECREF(ev_list);
+  Py_DECREF(q_list);
   Py_DECREF(res);
-  Py_DECREF(a_py);
 }
 
 double Cluster_DFT_VQE(
@@ -143,7 +139,8 @@ double Cluster_DFT_VQE(
                    int *SP_NZeros,
                    int *SP_Atoms,
                    double **EVec1,
-                   double *Work1)
+                   double *Work1,
+				   PyObject *pInst)
 {
   static int firsttime=1;
   int i,j,l,n,n2,n1,i1,i1s,j1,k1,l1;
@@ -219,19 +216,6 @@ double Cluster_DFT_VQE(
     n = n + Spe_Total_CNO[wanA];
   }
   n2 = n + 2;
-
-  /* python setting */
-  PyObject *pPath, *pModule, *pClass, *pArgs, *pInst;
-
-  pPath = PySys_GetObject("path"); //PyErr_Print();
-  PyList_Append(pPath, PyUnicode_FromString(VQE_PATH));
-  
-  pModule = PyImport_ImportModule("qdft");
-  pClass = PyObject_GetAttrString(pModule, "QDFT");
-  pArgs = PyTuple_Pack(1, PyLong_FromLong(n));
-  pInst = PyObject_CallObject(pClass, pArgs);
-
-  _import_array();
 
   /****************************************************
    Allocation
@@ -1491,12 +1475,6 @@ double Cluster_DFT_VQE(
   free(Num_Snd_EV);
   free(ie1);
   free(is1);
-
-  Py_DECREF(pInst);
-  Py_DECREF(pArgs);
-  Py_DECREF(pClass);
-  Py_DECREF(pModule);
-  Py_DECREF(pPath);
 
   /* for elapsed time */
 

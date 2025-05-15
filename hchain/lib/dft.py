@@ -32,10 +32,9 @@ class DFT:
 		)
 
 	def print_params(self):
-		print(f'method={self.method}')
-		print(f'N = {self.N}')
-		print(f'R = {self.R}')
-		print(f'np = {self.np}')
+		print('<DFT> Parameters')
+		print(f'method = {self.method}')
+		print(f'N = {self.N}  R = {self.R}  np = {self.np}')
 		print(f'dir_output = {self.dir_output}', end='\n\n')
 
 	def run_vasp(self):

@@ -6,7 +6,7 @@
 #$ -o log/
 
 method=$1
-N=8
+N=4
 
 t0=$(date +%s.%N)
 t0_string=$(date)
