@@ -12,6 +12,7 @@ parser.add_argument('method', type=str, choices=['vasp', 'espresso', 'wannier', 
 parser.add_argument('N', type=int)
 parser.add_argument('R', type=float)
 parser.add_argument('--keep_old', action='store_true')
+parser.add_argument('--vqe_seed', type=int, default=-1)
 args = parser.parse_args()
 
 dft = DFT(args.method, args.N, args.R, np=4, keep_old=args.keep_old)
@@ -22,3 +23,6 @@ elif args.method == 'openmx':   dft.run_openmx()
 elif args.method == 'openmx-vqe':
 	dft.np = 1
 	dft.run_openmx(eigensolver='VQE')
+elif args.method == 'openmx-vqe-shot':
+	dft.np = 1
+	dft.run_openmx(eigensolver='VQE', vqe_seed=args.vqe_seed)

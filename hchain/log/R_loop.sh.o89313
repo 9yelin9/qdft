@@ -1,0 +1,132 @@
+Traceback (most recent call last):
+  File "/home/yerin/qdft/hchain/./run.py", line 17, in <module>
+    dft = DFT(args.method, args.N, args.R, np=4, keep_old=args.keep_old)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/yerin/qdft/hchain/lib/dft.py", line 23, in __init__
+    if os.path.isdir(self.dir_output): shutil.rmtree(self.dir_output)
+                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/APP/enhpc/miniconda3/lib/python3.12/shutil.py", line 759, in rmtree
+    _rmtree_safe_fd(stack, onexc)
+  File "/APP/enhpc/miniconda3/lib/python3.12/shutil.py", line 703, in _rmtree_safe_fd
+    onexc(func, path, err)
+  File "/APP/enhpc/miniconda3/lib/python3.12/shutil.py", line 662, in _rmtree_safe_fd
+    os.rmdir(name, dir_fd=dirfd)
+OSError: [Errno 39] Directory not empty: '/home/yerin/qdft/hchain/output/N4/openmx-vqe_R0.50'
+
+The number of threads in each node for OpenMP parallelization is 1.
+
+
+*******************************************************
+*******************************************************
+ Welcome to OpenMX   Ver. 3.9.9                           
+ Copyright (C), 2002-2019, T. Ozaki                    
+ OpenMX comes with ABSOLUTELY NO WARRANTY.             
+ This is free software, and you are welcome to         
+ redistribute it under the constitution of the GNU-GPL.
+*******************************************************
+*******************************************************
+
+
+
+<Input_std>  Your input file was normally read.
+<Input_std>  The system includes 1 species and 4 atoms.
+
+*******************************************************
+                     PAO and VPS                       
+*******************************************************
+
+<SetPara_DFT>  PAOs of species H were normally found.
+<SetPara_DFT>  VPSs of species H were normally found.
+               H_CA19.vps is j-dependent.
+               In case of scf.SpinOrbit.Coupling=off,
+               j-dependent pseudo potentials are averaged by j-degeneracy,
+               which corresponds to a scalar relativistic treatment.
+
+*******************************************************
+     Fourier transform of PAO and projectors of VNL    
+*******************************************************
+
+<FT_PAO>          Fourier transform of pseudo atomic orbitals
+<FT_NLP>          Fourier transform of non-local projectors
+<FT_ProExpn_VNA>  Fourier transform of VNA separable projectors
+<FT_VNA>          Fourier transform of VNA potentials
+<FT_ProductPAO>   Fourier transform of product of PAOs
+
+*******************************************************
+  Allocation of atoms to processors at MD_iter=    1     
+*******************************************************
+
+ proc =   0  # of atoms=   4  estimated weight=         4.00000
+
+
+
+
+*******************************************************
+        Analysis of neighbors and setting of grids        
+*******************************************************
+
+TFNAN=      42   Average FNAN=  10.50000
+TSNAN=       0   Average SNAN=   0.00000
+<truncation> CpyCell= 1 ct_AN=   1 FNAN SNAN  10   0
+<truncation> CpyCell= 1 ct_AN=   2 FNAN SNAN  11   0
+<truncation> CpyCell= 1 ct_AN=   3 FNAN SNAN  11   0
+<truncation> CpyCell= 1 ct_AN=   4 FNAN SNAN  10   0
+TFNAN=      48   Average FNAN=  12.00000
+TSNAN=       6   Average SNAN=   1.50000
+<truncation> CpyCell= 2 ct_AN=   1 FNAN SNAN  12   1
+<truncation> CpyCell= 2 ct_AN=   2 FNAN SNAN  12   2
+<truncation> CpyCell= 2 ct_AN=   3 FNAN SNAN  12   2
+<truncation> CpyCell= 2 ct_AN=   4 FNAN SNAN  12   1
+TFNAN=      48   Average FNAN=  12.00000
+TSNAN=       6   Average SNAN=   1.50000
+<truncation> CpyCell= 3 ct_AN=   1 FNAN SNAN  12   1
+<truncation> CpyCell= 3 ct_AN=   2 FNAN SNAN  12   2
+<truncation> CpyCell= 3 ct_AN=   3 FNAN SNAN  12   2
+<truncation> CpyCell= 3 ct_AN=   4 FNAN SNAN  12   1
+TFNAN=      48   Average FNAN=  12.00000
+TSNAN=       6   Average SNAN=   1.50000
+<truncation> CpyCell= 3 ct_AN=   1 FNAN SNAN  12   1
+<truncation> CpyCell= 3 ct_AN=   2 FNAN SNAN  12   2
+<truncation> CpyCell= 3 ct_AN=   3 FNAN SNAN  12   2
+<truncation> CpyCell= 3 ct_AN=   4 FNAN SNAN  12   1
+<Check_System> The system is chain.
+lattice vectors (bohr)
+A  =  7.558903954316,  0.000000000000,  0.000000000000
+B  =  0.000000000000, 28.345889828684,  0.000000000000
+C  =  0.000000000000,  0.000000000000, 28.345889828684
+reciprocal lattice vectors (bohr^-1)
+RA =  0.831229678953,  0.000000000000,  0.000000000000
+RB =  0.000000000000,  0.221661247721,  0.000000000000
+RC =  0.000000000000,  0.000000000000,  0.221661247721
+Grid_Origin -0.472431497145 -13.700513417197 -13.700513417197
+Cell_Volume =   6073.499733393734 (Bohr^3)
+GridVol     =      0.843541629638 (Bohr^3)
+Grid_Origin -0.472431497145 -13.700513417197 -13.700513417197
+Cell_Volume =   6073.499733393734 (Bohr^3)
+GridVol     =      0.843541629638 (Bohr^3)
+<UCell_Box> Info. of cutoff energy and num. of grids
+lattice vectors (bohr)
+A  =  7.558903954316,  0.000000000000,  0.000000000000
+B  =  0.000000000000, 28.345889828684,  0.000000000000
+C  =  0.000000000000,  0.000000000000, 28.345889828684
+reciprocal lattice vectors (bohr^-1)
+RA =  0.831229678953,  0.000000000000,  0.000000000000
+RB =  0.000000000000,  0.221661247721,  0.000000000000
+RC =  0.000000000000,  0.000000000000,  0.221661247721
+Required cutoff energy (Ryd) for 3D-grids = 11.0248
+    Used cutoff energy (Ryd) for 3D-grids = 11.0551, 11.0551, 11.0551
+Num. of grids of a-, b-, and c-axes =  8, 30, 30
+Grid_Origin -0.472431497145 -13.700513417197 -13.700513417197
+Cell_Volume =   6073.499733393734 (Bohr^3)
+GridVol     =      0.843541629638 (Bohr^3)
+Cell vectors (bohr) of the grid cell (gtv)
+  gtv_a =  0.944862994289,  0.000000000000,  0.000000000000
+  gtv_b =  0.000000000000,  0.944862994289,  0.000000000000
+  gtv_c =  0.000000000000,  0.000000000000,  0.944862994289
+  |gtv_a| =  0.944862994289
+  |gtv_b| =  0.944862994289
+  |gtv_c| =  0.944862994289
+Num. of grids overlapping with atom    1 = 1064
+Num. of grids overlapping with atom    2 = 1064
+Num. of grids overlapping with atom    3 = 1064
+Num. of grids overlapping with atom    4 = 1064

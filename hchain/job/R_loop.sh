@@ -12,7 +12,7 @@ t0=$(date +%s.%N)
 t0_string=$(date)
 
 #./run.py $method $N 1
-for R in `seq 0.50 0.10 3.00`
+for R in `seq 0.50 0.50 3.00`
 do
 	./run.py $method $N $R
 done	

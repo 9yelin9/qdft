@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 #import torch
 import scipy
@@ -9,21 +10,21 @@ import pennylane as qml
 class QDFT:
 	def __init__(self, N):
 		self.N  = N # num of spin-orbitals
-		self.Ne = self.N # num of electrons
-		#self.Nocc = self.Ne // 2
-		self.Nocc = self.Ne # num of occupied orbitals
+		#self.Ne = self.N # num of electrons
+		#self.Nocc = self.Ne // 2 # num of occupied orbitals
 
 		self.M = int(np.log2(self.N)) # num of qubits
 		self.Nl = 3 # num of layers
 		self.wires = list(range(self.M))
 
 		self.dev = qml.device('default.qubit', wires=self.M)
+		#self.dev = qml.device('default.qubit', wires=self.M, shots=100)
 		self.qnode = qml.QNode(self.circuit, self.dev, diff_method='parameter-shift', interface='autograd')
 		#self.qnode = qml.QNode(self.circuit, self.dev, diff_method='best', interface='torch')
 
 		self.bases = np.array([list(np.binary_repr(i, width=self.M)) for i in range(self.N)], dtype='int')
 		self.projector = self.gen_projector()
-		self.weight = [(self.Nocc - k) / (self.Nocc * (self.Nocc + 1) / 2) for k in range(self.Nocc)]
+		self.weight = [(self.N - k) / (self.N * (self.N + 1) / 2) for k in range(self.N)]
 
 		np.random.seed(42)
 		self.theta = np.random.rand(self.M * (self.Nl+1))
@@ -33,7 +34,7 @@ class QDFT:
 		#self.n_epoch = 1000
 		#self.loss_tol = 1e-6
 		#self.patience = 3
-		print(f'<QDFT> Parameters\nN = {self.N}  Ne = {self.Ne}  Nocc = {self.Nocc}  M = {self.M}  Nl = {self.Nl}')
+		print(f'<QDFT> Parameters\nN = {self.N}\tM = {self.M}\tNl = {self.Nl}')
 
 	def gen_projector(self):
 		X  = np.array([[0,   1], [1,  0]], dtype='complex')	
@@ -63,14 +64,16 @@ class QDFT:
 		for n in range(self.Nl):
 			for m in self.wires[:-1]: qml.CNOT(wires=[m, m+1])
 			for m in self.wires:      qml.RY(theta[self.M * (n+1) + m], wires=m)
-		return qml.expval(hamiltonian), qml.state() #qml.probs(wires=self.wires)
+		return qml.expval(hamiltonian), [qml.expval(p) for p in self.projector] #qml.state()
 
 	def run_circuit(self, theta, bases, hamiltonian):
-		#with mp.Pool(len(bases)) as pool:
-		#	res = pool.starmap(self.qnode, [(theta, basis, hamiltonian) for basis in bases])
-		#return zip(*res)
-		energy, state = zip(*[self.qnode(theta, basis, hamiltonian) for basis in bases])
-		return energy, state
+		"""
+		with mp.Pool(len(bases)) as pool:
+			res = pool.starmap(self.qnode, [(theta, basis, hamiltonian) for basis in bases])
+		return zip(*res)
+		"""
+		energy, gamma = zip(*[self.qnode(theta, basis, hamiltonian) for basis in bases])
+		return energy, gamma
 
 	def energy_weighted(self, theta, bases, hamiltonian):
 		energy, _ = self.run_circuit(theta, bases, hamiltonian)
@@ -80,27 +83,14 @@ class QDFT:
 		return qml.grad(self.energy_weighted, argnum=0)(theta, bases, hamiltonian)
 
 	def vqe(self, hamiltonian):
-		#print(np.linalg.eig(np.reshape(hamiltonian, (self.N, self.N))))
 		hamiltonian = qml.Hamiltonian(hamiltonian, self.projector)
-		
+
 		t0 = time.time()
-		res = scipy.optimize.minimize(self.energy_weighted, self.theta,\
-				args=(self.bases[:self.Nocc], hamiltonian),\
-				method='L-BFGS-B',\
-				options={'disp': True})	
-		self.theta = res.x
-		tm, ts = divmod(int(time.time() - t0), 60)
-
-		energy, state = self.run_circuit(self.theta, self.bases[:self.Nocc], hamiltonian)
-		energy = np.array(energy).tolist()
-		state = np.array(state).real.ravel().tolist()
-		#print(energy, state)
-
 		"""
 		loss_best, cnt = 100, 0
 		for epoch in range(self.n_epoch):
 			self.opt.zero_grad()
-			loss = self.energy_weighted(self.theta, self.bases[:self.Nocc], hamiltonian)
+			loss = self.energy_weighted(self.theta, self.bases[:self.N], hamiltonian)
 			loss.backward()
 			self.opt.step()
 
@@ -111,14 +101,24 @@ class QDFT:
 				if cnt >= self.patience: break
 				else: cnt += 1
 
-		energy, state = self.run_circuit(self.theta, self.bases[:self.Nocc], hamiltonian)
+		energy, state = self.run_circuit(self.theta, self.bases[:self.N], hamiltonian)
 		energy = [x.item() for x in energy]
 		state = np.ravel([x.tolist() for x in state]).real.tolist()
 		print(f'<VQE>  num_epoch = {epoch}  energy_weighted = {loss.item()}')
 		"""
+		res = scipy.optimize.minimize(self.energy_weighted, self.theta,\
+				args=(self.bases, hamiltonian),\
+				method='L-BFGS-B',\
+				options={'disp': True})	
+		self.theta = res.x
+		tm, ts = divmod(int(time.time() - t0), 60)
+
+		energy, gamma = self.run_circuit(self.theta, self.bases, hamiltonian)
+		energy = np.array(energy).tolist()
+		gamma = np.array(gamma).ravel().tolist()
 
 		print(f'{self.vqe.__name__} time elapsed: {tm}m {ts}s', end='\n\n')
-		return energy, state
+		return energy, gamma
 
 #QDFT(2).vqe([1, 2, 2, 3])
 

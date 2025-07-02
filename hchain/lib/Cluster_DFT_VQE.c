@@ -84,29 +84,24 @@ static double Calc_DM_Cluster_collinear(int myid0,
 					double *EDM1,
 					double *PDM1,
 					double *Work1,
-					double **EVec1, 
+					double **VQE_Gamma, 
 					int *SP_NZeros,
 					int *SP_Atoms );
 
-void VQE(PyObject *pInst, int *na, double *a, double *ev, double *q) {
+void VQE(PyObject *pInst, int *na, double *a, double *ev, double *gamma) {
   int i, n=*na;
-  PyObject *res, *a_list, *ev_list, *q_list;
+  PyObject *arr, *res;
 
   PyErr_Print();
-  a_list = PyList_New(n*n);
-  for(i=0; i<n*n; i++) PyList_SetItem(a_list, i, PyFloat_FromDouble(a[i]));
+  arr = PyList_New(n*n);
+  for(i=0; i<n*n; i++) PyList_SetItem(arr, i, PyFloat_FromDouble(a[i]));
 
-  res = PyObject_CallMethod(pInst, "vqe", "O", a_list);
+  res = PyObject_CallMethod(pInst, "vqe", "O", arr);
 
-  ev_list = PyTuple_GetItem(res, 0);
-  q_list  = PyTuple_GetItem(res, 1);
+  for(i=0; i<n; i++) ev[i] = PyFloat_AsDouble(PyList_GetItem(PyTuple_GetItem(res, 0), i));
+  for(i=0; i<n*n*n; i++) gamma[i] = PyFloat_AsDouble(PyList_GetItem(PyTuple_GetItem(res, 1), i));
 
-  for(i=0; i<n; i++) ev[i] = PyFloat_AsDouble(PyList_GetItem(ev_list, i));
-  for(i=0; i<n*n; i++) q[i] = PyFloat_AsDouble(PyList_GetItem(q_list, i));
-
-  Py_DECREF(a_list);
-  Py_DECREF(ev_list);
-  Py_DECREF(q_list);
+  Py_DECREF(arr);
   Py_DECREF(res);
 }
 
@@ -139,6 +134,7 @@ double Cluster_DFT_VQE(
                    int *SP_NZeros,
                    int *SP_Atoms,
                    double **EVec1,
+				   double **VQE_Gamma,
                    double *Work1,
 				   PyObject *pInst)
 {
@@ -569,7 +565,7 @@ double Cluster_DFT_VQE(
   */
 
   /* VQE */
-  VQE(pInst, &n, Hs, &ko[spin][1], Cs);
+  VQE(pInst, &n, Hs, &ko[spin][1], VQE_Gamma[spin]);
 
   if (measure_time){
     dtime(&etime);
@@ -583,12 +579,31 @@ double Cluster_DFT_VQE(
 
   if (measure_time) dtime(&stime);
 
+  /*
   for(i=0;i<na_rows*na_cols;i++){
     Hs[i] = 0.0;
   }
 
   Cblacs_barrier(ictxt1,"A");
   F77_NAME(pdgemm,PDGEMM)("T","T",&n,&n,&n,&alpha,Cs,&ONE,&ONE,descC,Ss,&ONE,&ONE,descS,&beta,Hs,&ONE,&ONE,descH);
+  */
+
+  for(k=0; k<n; k++) {
+	  for(i=0; i<na_rows*na_cols; i++) {
+		  Hs[i] = 0.0;
+		  Cs[i] = VQE_Gamma[spin][na_rows*na_cols*k + i];
+	  }
+
+	  Cblacs_barrier(ictxt1,"A");
+	  F77_NAME(pdgemm,PDGEMM)("N","T",&n,&n,&n,&alpha,Cs,&ONE,&ONE,descC,Ss,&ONE,&ONE,descS,&beta,Hs,&ONE,&ONE,descH);
+
+	  for(i=0; i<na_rows*na_cols; i++) Cs[i] = 0.0;
+
+	  Cblacs_barrier(ictxt1,"C");
+	  F77_NAME(pdgemm,PDGEMM)("N","N",&n,&n,&n,&alpha,Ss,&ONE,&ONE,descC,Hs,&ONE,&ONE,descS,&beta,Cs,&ONE,&ONE,descH);
+
+	  for(i=0; i<na_rows*na_cols; i++) VQE_Gamma[spin][na_rows*na_cols*k + i] = Cs[i];
+  }
 
   /* MPI communications of Hs */
 
@@ -1097,7 +1112,7 @@ double Cluster_DFT_VQE(
 
     time6 += Calc_DM_Cluster_collinear( myid0,numprocs0,myid1,numprocs1,myworld1,
 					size_H1,is2,ie2,MP,n,MPI_CommWD1,Comm_World_StartID1,
-					CDM,EDM,ko,CDM1,EDM1,PDM1,Work1,EVec1,SP_NZeros,SP_Atoms);
+					CDM,EDM,ko,CDM1,EDM1,PDM1,Work1,VQE_Gamma,SP_NZeros,SP_Atoms);
 
     /****************************************************
                         Bond Energies
@@ -1509,7 +1524,7 @@ double Calc_DM_Cluster_collinear(
     double *EDM1,
     double *PDM1,
     double *Work1,
-    double **EVec1, 
+    double **VQE_Gamma, 
     int *SP_NZeros,
     int *SP_Atoms )
 {
@@ -1596,14 +1611,16 @@ double Calc_DM_Cluster_collinear(
       for (i=0; i<tnoA; i++){
 	for (j=0; j<tnoB; j++){
 
-	  i0 = (Anum + i - 1)*(ie2[myid1]-is2[myid1]+1) - is2[myid1];
-	  j0 = (Bnum + j - 1)*(ie2[myid1]-is2[myid1]+1) - is2[myid1];
+	  //i0 = (Anum + i - 1)*(ie2[myid1]-is2[myid1]+1) - is2[myid1];
+	  //j0 = (Bnum + j - 1)*(ie2[myid1]-is2[myid1]+1) - is2[myid1];
+	  i0 = Anum + i - 1;
+	  j0 = Bnum + j - 1;
 
           sum1 = 0.0;
           sum2 = 0.0;
 
 	  for (k=kmin; k<=kmax; k++){
-	    dum = FF[k]*EVec1[spin][i0+k]*EVec1[spin][j0+k];
+	    dum = FF[k]*VQE_Gamma[spin][n*n*(k-1) + n*i0 + j0];
 	    sum1 += dum;
 	    sum2 += dum*ko[spin][k];
 	  }
@@ -1615,7 +1632,7 @@ double Calc_DM_Cluster_collinear(
 
             sum1 = 0.0;
 	    for (k=kmin; k<=kmax; k++){
-	      sum1 += dFF[k]*EVec1[spin][i0+k]*EVec1[spin][j0+k];
+	      sum1 += dFF[k]*VQE_Gamma[spin][n*n*(k-1) + n*i0 + j0];
 	    }
             PDM1[p] = sum1;
 	  }

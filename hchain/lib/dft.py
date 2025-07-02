@@ -154,7 +154,7 @@ class DFT:
 
 		print(f'{self.run_wannier.__name__} Done: {tm}m {ts}s', end='\n\n')
 
-	def run_openmx(self, eigensolver='cluster'):
+	def run_openmx(self, eigensolver='cluster', vqe_seed=-1):
 		self.print_params()
 
 		self.atoms.calc = OpenMX(
@@ -172,6 +172,7 @@ class DFT:
 			spinpol=None,
 			eigensolver=eigensolver,
 			mixer='rmm-diis',
+			vqe_seed=None if seed < 0 else seed,
 		)
 
 		t0 = time.time()
