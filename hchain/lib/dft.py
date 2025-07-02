@@ -158,7 +158,7 @@ class DFT:
 		self.print_params()
 
 		self.atoms.calc = OpenMX(
-			label=self.dir_output + '/openmx',
+			label=self.dir_output + ('/openmx' if vqe_seed < 0 else f'/openmx_vs{vqe_seed}'),
 			data_path='/home/yerin/openmx3.9/DFT_DATA19',
 			command='openmx',
 			mpi={'processes': self.np},
@@ -172,7 +172,7 @@ class DFT:
 			spinpol=None,
 			eigensolver=eigensolver,
 			mixer='rmm-diis',
-			vqe_seed=None if seed < 0 else seed,
+			vqe_seed=vqe_seed,
 		)
 
 		t0 = time.time()

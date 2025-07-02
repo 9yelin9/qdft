@@ -84,7 +84,7 @@ static double Calc_DM_Cluster_collinear(int myid0,
 					double *EDM1,
 					double *PDM1,
 					double *Work1,
-					double **VQE_Gamma, 
+					double **VQE_gamma, 
 					int *SP_NZeros,
 					int *SP_Atoms );
 
@@ -134,7 +134,7 @@ double Cluster_DFT_VQE(
                    int *SP_NZeros,
                    int *SP_Atoms,
                    double **EVec1,
-				   double **VQE_Gamma,
+				   double **VQE_gamma,
                    double *Work1,
 				   PyObject *pInst)
 {
@@ -565,7 +565,7 @@ double Cluster_DFT_VQE(
   */
 
   /* VQE */
-  VQE(pInst, &n, Hs, &ko[spin][1], VQE_Gamma[spin]);
+  VQE(pInst, &n, Hs, &ko[spin][1], VQE_gamma[spin]);
 
   if (measure_time){
     dtime(&etime);
@@ -591,7 +591,7 @@ double Cluster_DFT_VQE(
   for(k=0; k<n; k++) {
 	  for(i=0; i<na_rows*na_cols; i++) {
 		  Hs[i] = 0.0;
-		  Cs[i] = VQE_Gamma[spin][na_rows*na_cols*k + i];
+		  Cs[i] = VQE_gamma[spin][na_rows*na_cols*k + i];
 	  }
 
 	  Cblacs_barrier(ictxt1,"A");
@@ -602,7 +602,7 @@ double Cluster_DFT_VQE(
 	  Cblacs_barrier(ictxt1,"C");
 	  F77_NAME(pdgemm,PDGEMM)("N","N",&n,&n,&n,&alpha,Ss,&ONE,&ONE,descC,Hs,&ONE,&ONE,descS,&beta,Cs,&ONE,&ONE,descH);
 
-	  for(i=0; i<na_rows*na_cols; i++) VQE_Gamma[spin][na_rows*na_cols*k + i] = Cs[i];
+	  for(i=0; i<na_rows*na_cols; i++) VQE_gamma[spin][na_rows*na_cols*k + i] = Cs[i];
   }
 
   /* MPI communications of Hs */
@@ -1112,7 +1112,7 @@ double Cluster_DFT_VQE(
 
     time6 += Calc_DM_Cluster_collinear( myid0,numprocs0,myid1,numprocs1,myworld1,
 					size_H1,is2,ie2,MP,n,MPI_CommWD1,Comm_World_StartID1,
-					CDM,EDM,ko,CDM1,EDM1,PDM1,Work1,VQE_Gamma,SP_NZeros,SP_Atoms);
+					CDM,EDM,ko,CDM1,EDM1,PDM1,Work1,VQE_gamma,SP_NZeros,SP_Atoms);
 
     /****************************************************
                         Bond Energies
@@ -1524,7 +1524,7 @@ double Calc_DM_Cluster_collinear(
     double *EDM1,
     double *PDM1,
     double *Work1,
-    double **VQE_Gamma, 
+    double **VQE_gamma, 
     int *SP_NZeros,
     int *SP_Atoms )
 {
@@ -1620,7 +1620,7 @@ double Calc_DM_Cluster_collinear(
           sum2 = 0.0;
 
 	  for (k=kmin; k<=kmax; k++){
-	    dum = FF[k]*VQE_Gamma[spin][n*n*(k-1) + n*i0 + j0];
+	    dum = FF[k]*VQE_gamma[spin][n*n*(k-1) + n*i0 + j0];
 	    sum1 += dum;
 	    sum2 += dum*ko[spin][k];
 	  }
@@ -1632,7 +1632,7 @@ double Calc_DM_Cluster_collinear(
 
             sum1 = 0.0;
 	    for (k=kmin; k<=kmax; k++){
-	      sum1 += dFF[k]*VQE_Gamma[spin][n*n*(k-1) + n*i0 + j0];
+	      sum1 += dFF[k]*VQE_gamma[spin][n*n*(k-1) + n*i0 + j0];
 	    }
             PDM1[p] = sum1;
 	  }
