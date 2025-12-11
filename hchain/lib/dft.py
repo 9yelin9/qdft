@@ -13,15 +13,13 @@ from ase.calculators.openmx import OpenMX
 from ase.calculators.espresso import Espresso, EspressoProfile
 
 class DFT:
-	def __init__(self, method, N, R, np=4, keep_old=False):
+	def __init__(self, method, N, R, np=4):
 		self.method = method
 		self.N = N
 		self.R = R
 		self.np = np
 		self.dir_output = f'{os.getcwd()}/output/N{self.N}/{self.method}_R{self.R:.2f}'
-		if not keep_old:
-			if os.path.isdir(self.dir_output): shutil.rmtree(self.dir_output)
-			os.makedirs(self.dir_output, exist_ok=True)
+		os.makedirs(self.dir_output, exist_ok=True)
 
 		self.atom = 'H'
 		self.atoms = Atoms(
@@ -159,12 +157,12 @@ class DFT:
 
 		self.atoms.calc = OpenMX(
 			label=self.dir_output + ('/openmx' if vqe_seed < 0 else f'/openmx_vs{vqe_seed}'),
-			data_path='/home/yerin/openmx3.9/DFT_DATA19',
-			command='openmx',
+			data_path='/home/yerin/openmx3.9.qdft/DFT_DATA19',
+			command='openmx_qdft',
 			mpi={'processes': self.np},
 			definition_of_atomic_species=[['H', 'H6.0-s1', 'H_CA19']],
 			xc='LDA',
-			maxiter=1000,
+			maxiter=100,
 			energy_cutoff=150.,
 			smearing=300,
 			kpts=(1, 1, 1),

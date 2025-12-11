@@ -8,7 +8,7 @@ import pennylane as qml
 #import multiprocessing as mp
 
 class QDFT:
-	def __init__(self, N):
+	def __init__(self, N, vqe_seed=-1):
 		self.N  = N # num of spin-orbitals
 		#self.Ne = self.N # num of electrons
 		#self.Nocc = self.Ne // 2 # num of occupied orbitals
@@ -17,8 +17,11 @@ class QDFT:
 		self.Nl = 3 # num of layers
 		self.wires = list(range(self.M))
 
-		self.dev = qml.device('default.qubit', wires=self.M)
-		#self.dev = qml.device('default.qubit', wires=self.M, shots=100)
+		if vqe_seed < 0:
+			self.dev = qml.device('default.qubit', wires=self.M)
+		else:
+			self.dev = qml.device('default.qubit', wires=self.M, shots=1, seed=vqe_seed)
+
 		self.qnode = qml.QNode(self.circuit, self.dev, diff_method='parameter-shift', interface='autograd')
 		#self.qnode = qml.QNode(self.circuit, self.dev, diff_method='best', interface='torch')
 
