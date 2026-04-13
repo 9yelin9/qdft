@@ -1,2 +1,2 @@
 # qdft.old
-Quantum algorithm analog of density functional theory
+Quantum algorithm analog of density functional theory (Deprecated)
